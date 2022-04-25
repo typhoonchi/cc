@@ -7,7 +7,11 @@
 
 bool loadSrc(const char* fileName);
 bool init(void);
-void printToken(int lineNo, const struct symbol* ptr);
+struct treeNode* createNode(void);
+void printToken(int lineNo);
 void printSource(int lineNo);
-
+void printTree(struct treeNode* node, int n);
+void printType(int type);
+void printOperator(int op);
+void printTab(int n);
 #endif //_UTILITY_H

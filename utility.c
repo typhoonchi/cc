@@ -39,15 +39,19 @@ bool loadSrc(const char* fileName){
 
 bool init(void) {
     symbolTable = (struct symbol*)malloc(MAXSIZE * sizeof(struct symbol));
-    if (symbolTable == NULL) {
+//    root = (struct treeNode*) malloc(sizeof(struct treeNode));
+    symbolStack = (struct treeNode*) malloc(STACKSIZE * sizeof(struct treeNode));
+    top = 0;
+    if (symbolTable == NULL || symbolStack == NULL) {
         return false;
     }
     memset(symbolTable, 0, MAXSIZE * sizeof(struct symbol));
     symbolPtr = symbolTable;
+
     return true;
 }
 
-void printToken(int lineNo, const struct symbol* ptr) {
+void printToken(int lineNo) {
     switch (token) {
         case Id:
             printf("\t%-3d: Id             --->   %s\n",lineNo, tokenString);
@@ -82,9 +86,6 @@ void printToken(int lineNo, const struct symbol* ptr) {
         case And:
             printf("\t%-3d: and                   &\n",lineNo);
             break;
-        case Not:
-            printf("\t%-3d: not                   !\n",lineNo);
-            break;
         case Lt:
             printf("\t%-3d: less than             <\n",lineNo);
             break;
@@ -106,29 +107,18 @@ void printToken(int lineNo, const struct symbol* ptr) {
         case Mod:
             printf("\t%-3d: mod                   %%\n",lineNo);
             break;
-        case Lbracket:
+        case Bracket:
             printf("\t%-3d:                      [\n",lineNo);
             break;
-        case Rbracket:
-            printf("\t%-3d:                      ]\n",lineNo);
-            break;
-        case Lbrace:
-            printf("\t%-3d:                      {\n",lineNo);
-            break;
-        case Rbrace:
-            printf("\t%-3d:                      }\n",lineNo);
-            break;
-        case Lparenthesis:
-            printf("\t%-3d:                      (\n",lineNo);
-            break;
-        case Rparenthesis:
-            printf("\t%-3d:                      )\n",lineNo);
-            break;
-        case Comma:
-            printf("\t%-3d:                      ,\n",lineNo);
-            break;
-        case Semicolon:
-            printf("\t%-3d:                      ;\n",lineNo);
+        case '!':
+        case ']':
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case ',':
+        case ';':
+            printf("\t%-3d:                      %c\n",lineNo,(char)token);
             break;
         case Lor:
             printf("\t%-3d: lor                  ||\n",lineNo);
@@ -163,25 +153,6 @@ void printToken(int lineNo, const struct symbol* ptr) {
         default:
             break;
     }
-//    if (ptr->token == Id) {
-//        printf("\t%-3d: Id             --->   %s\n",lineNo, ptr->name);
-//    } else if (ptr->token == String) {
-//        printf("\t%-3d: String         --->   %s\n",lineNo, ptr->name);
-//    } else if (ptr->token == Char) {
-//        if (ptr->value == '\n') {
-//            printf("\t%-3d: Char           --->   \\n\n",lineNo);
-//        } else {
-//            printf("\t%-3d: Char           --->   %c\n",lineNo, (char)ptr->value);
-//        }
-//    } else if (ptr->token == Num) {
-//        printf("\t%-3d: Num            --->   %lld\n",lineNo, ptr->value);
-//    } else if (ptr->token >= CHAR && ptr->token <= VOID) {
-//        printf("\t%-3d: reserved word  --->   %s\n",lineNo, ptr->name);
-//    } else if (ptr->token >= Assign && ptr->token <= Semicolon) {
-//        printf("\t%-3d:                       %c\n",lineNo, (char)ptr->value);
-//    } else if (ptr->token >= Lor && ptr->token <= Dec) {
-//        printf("\t%-3d:                       %s\n",lineNo,ptr->name);
-//    }
 }
 
 void printSource(int lineNo){
@@ -195,5 +166,216 @@ void printSource(int lineNo){
         sourcePtr++;
     } else {
         printf("\n");
+    }
+}
+
+struct treeNode* createNode(void){
+    struct treeNode* t = (struct treeNode*) malloc(sizeof(struct treeNode));
+    if (t == NULL) {
+        exit(1);
+    }
+    for (int i = 0; i < MAXCHILDREN; i++) {
+        t->children[i] = NULL;
+    }
+    t->sibling = NULL;
+    t->isArray = false;
+    t->size = 1;
+    t->valType = 0;
+    t->opType = 0;
+    t->lineNo = line;
+    return t;
+}
+
+void printTree(struct treeNode* node, int n){
+    struct treeNode* temp;
+    while (node != NULL) {
+        if (node->nodeType == Function) {
+            printTab(n);
+            printf("Function name:%s\ttype:",node->name);
+            printType(node->type);
+            printf("\n");
+
+            printTab(n);
+            printf("Parameters:\n");
+            printTree(node->children[0], n + 1);
+            printTab(n);
+            printf("Function Body:\n");
+            printTree(node->children[1], n + 1);
+            printf("\n");
+        } else if (node->nodeType == IfStatement) {
+            printTab(n);
+            printf("IF statement:\n");
+            printTab(n);
+            printf("Conditions:\n");
+            printTree(node->children[0],n + 1);
+            printTab(n);
+            printf("Success condition:\n");
+            printTree(node->children[1], n + 1);
+            if (node->children[2] != NULL) {
+                printTab(n);
+                printf("Failure condition:\n");
+                printTree(node->children[2], n + 1);
+            }
+            printf("\n");
+        } else if (node->nodeType == WhileStatement) {
+            printTab(n);
+            printf("While statement:\n");
+            printTab(n);
+            printf("Conditions:\n");
+            printTree(node->children[0],n + 1);
+            printTab(n);
+            printf("While Body:\n");
+            printTree(node->children[1], n + 1);
+            printf("\n");
+        } else if (node->nodeType == ExpressStatement) {
+            printTab(n);
+            if (node->valType == Operator) {
+                printOperator(node->opType);
+                printf("\n");
+            } else if (node->valType == Constant) {
+                printf("Num:%lld\n",node->value);
+            } else if (node->valType == Identifier) {
+                printf("Id:%s\n",node->name);
+            } else if (node->valType == Call) {
+                printf("Function call:%s\n",node->name);
+            }
+            printTree(node->children[0], n + 1);
+            printTree(node->children[1], n + 1);
+        } else if (node->nodeType == ReturnStatement) {
+            printTab(n);
+            printf("Return statement:\n");
+            printTab(n);
+            printf("Return value:\n");
+            printTree(node->children[0], n + 1);
+            printf("\n");
+        } else if (node->nodeType == ParameterStatement) {
+            if (node->type == VOID) {
+                printTab(n);
+                printType(node->type);
+                printf("\n");
+            } else {
+                printTab(n);
+                printf("%s(",node->name);
+                printType(node->type);
+                printf(")\n");
+            }
+        } else if (node->nodeType == DeclareStatement) {
+            printTab(n);
+            printf("Declare statement:\n");
+            printTab(n);
+            printf("Type:");
+            printType(node->type);
+            if (node->type == INT || node->type == CHAR) {
+                printf("\tid name:%s\n",node->name);
+            } else {
+                printf("\tid name:%s\tsize:%lld\n",node->name,node->size);
+            }
+            printf("\n");
+        }
+        node = node->sibling;
+    }
+}
+
+
+void printTab(int n){
+    for (int i = 0; i < n; i++) {
+        printf("\t");
+    }
+}
+
+void printType(int type){
+    if (type == INT) {
+        printf("INT");
+    } else if (type == CHAR) {
+        printf("CHAR");
+    } else if (type == VOID) {
+        printf("VOID");
+    } else if (type == INTARRAY) {
+        printf("INT ARRAY");
+    } else if (type == CHARARRAY) {
+        printf("CHAR ARRAY");
+    }
+
+}
+void printOperator(int op){
+    switch (op) {
+        case Assign:
+            printf("assign(=)");
+            break;
+        case Or:
+            printf("or(|)");
+            break;
+        case Xor:
+            printf("xor(^)");
+            break;
+        case And:
+            printf("and(&)");
+            break;
+        case Lt:
+            printf("less than(<)");
+            break;
+        case Gt:
+            printf("greater than(>)");
+            break;
+        case Add:
+            printf("add(+)");
+            break;
+        case Sub:
+            printf("sub(-)");
+            break;
+        case Mul:
+            printf("mul(*)");
+            break;
+        case Div:
+            printf("div(/)");
+            break;
+        case Mod:
+            printf("mod(%%)");
+            break;
+        case Bracket:
+            printf("bracket([])");
+            break;
+        case '!':
+        case ']':
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case ',':
+        case ';':
+            printf("%c",op);
+            break;
+        case Lor:
+            printf("lor(||)");
+            break;
+        case Land:
+            printf("land(&&)");
+            break;
+        case Eq:
+            printf("equal(==)");
+            break;
+        case Ne:
+            printf("not equal(!=)");
+            break;
+        case Le:
+            printf("le(<=)");
+            break;
+        case Ge:
+            printf("ge(>=)");
+            break;
+        case Shl:
+            printf("shl(<<)");
+            break;
+        case Shr:
+            printf("shr(>>)");
+            break;
+        case Inc:
+            printf("inc(++)");
+            break;
+        case Dec:
+            printf("dec(--)");
+            break;
+        default:
+            break;
     }
 }

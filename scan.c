@@ -13,13 +13,13 @@ void getToken(void){
     char* chPtr = NULL;
 
     // 定位到空符号表
-    while (symbolPtr->token != 0) {
+/*    while (symbolPtr->token != 0) {
         symbolPtr++;
-    }
+    }*/
     // 取字符
-    while (*source != '\0') {
+    while ((token = (unsigned char)*source) != '\0') {
         // 取字符
-        token = (unsigned char)*source;
+//        token = (unsigned char)*source;
         // 缓冲区指针移动, 向前看一个
         source++;
         // DFA
@@ -34,6 +34,8 @@ void getToken(void){
             while ((*source != '\0') && (*source != '\n')) {
                 source++;
             }
+        } else if (token == ' ' || token == '\t') {
+            // do nothing
         } else if (isalpha((int)token) || token == '_') {
             // 处理标识符 ID
             // 定位到标识符开始位置
@@ -99,8 +101,9 @@ void getToken(void){
                 }
             }
             // 插入符号表
-            token = symbolPtr->token = Num;
-            symbolPtr->value = tokenValue;
+//            token = symbolPtr->token = Num;
+//            symbolPtr->value = tokenValue;
+            token = Num;
             break;
         } else if (token == '"' || token == '\'') {
             // 处理字符串和字符
@@ -123,12 +126,14 @@ void getToken(void){
             source++;
             if (token == '"') {
                 // 记录到符号表
-                token = symbolPtr->token = String;
-                symbolPtr->name = tokenString;
+                token = String;
+//                token = symbolPtr->token = String;
+//                symbolPtr->name = tokenString;
             } else {
                 // 记录到符号表
-                token = symbolPtr->token = Char;
-                symbolPtr->value = tokenValue;
+                token = Char;
+//                token = symbolPtr->token = Char;
+//                symbolPtr->value = tokenValue;
             }
             break;
         } else if (token == '/') {
@@ -230,7 +235,7 @@ void getToken(void){
                 // 处理非运算
 //                symbolPtr->token = Not;
 //                symbolPtr->value = token;
-                token = Not;
+                break;
             }
             break;
         } else if (token == '&') {
@@ -312,56 +317,28 @@ void getToken(void){
             }
             break;
         } else if (token == '[') {
+            token = Bracket;
+            break;
+        } else if (token == ']' || token == '(' || token == ')' || token == '{' || token == '}' || token == ';' || token == ',') {
 //            symbolPtr->token = Lbracket;
 //            symbolPtr->value = token;
-            token = Lbracket;
+//            token = Lbracket;
             break;
-        } else if (token == ']') {
-//            symbolPtr->token = Rbracket;
-//            symbolPtr->value = token;
-            token = Rbracket;
-            break;
-        } else if (token == '(') {
-//            symbolPtr->token = Lparenthesis;
-//            symbolPtr->value = token;
-            token = Lparenthesis;
-            break;
-        } else if (token == ')') {
-//            symbolPtr->token = Rparenthesis;
-//            symbolPtr->value = token;
-            token = Rparenthesis;
-            break;
-        } else if (token == '{') {
-//            symbolPtr->token = Lbrace;
-//            symbolPtr->value = token;
-            token = Lbrace;
-            break;
-        } else if (token == '}') {
-//            symbolPtr->token = Rbrace;
-//            symbolPtr->value = token;
-            token = Rbrace;
-            break;
-        } else if (token == ';') {
-//            symbolPtr->token = Semicolon;
-//            symbolPtr->value = token;
-            token = Semicolon;
-            break;
-        } else if (token == ',') {
-//            symbolPtr->token = Comma;
-//            symbolPtr->value = token;
-            token = Comma;
-            break;
+        } else {
+            exit(1);
         }
     }
     if (scanTrace) {
-        printToken(line, symbolPtr);
+        printToken(line);
     }
 }
 
 void initKeywords(void){
+    int record;
     char* keywords[7] = {
             "char", "int", "if", "else", "return", "while", "void"
     };
+    record = scanTrace;
     scanTrace = 0;
     for (int i = 0; i < 7; i++) {
         source = keywords[i];
@@ -369,5 +346,5 @@ void initKeywords(void){
         symbolPtr->token = CHAR + i;
     }
     source = sourceDump;
-    scanTrace = 1;
+    scanTrace = record;
 }
