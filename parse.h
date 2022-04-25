@@ -22,5 +22,4 @@ struct treeNode* parseIfStatement();
 struct treeNode* parseWhileStatement();
 struct treeNode* parseReturnStatement();
 struct treeNode* parseExpressionStatement(int operator);
-struct treeNode* parseFunctionUsage();
 #endif //_PARSE_H
