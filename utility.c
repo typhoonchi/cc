@@ -194,12 +194,12 @@ void printTree(struct treeNode* node, int n){
             printType(node->identifierType);
             printf("\n");
 
-            printTab(n);
+            printTab(n + 1);
             printf("Parameters:\n");
-            printTree(node->children[0], n + 1);
-            printTab(n);
+            printTree(node->children[0], n + 2);
+            printTab(n + 1);
             printf("Function Body:\n");
-            printTree(node->children[1], n + 1);
+            printTree(node->children[1], n + 2);
         } else if (node->statementType == IfStatement) {
             printTab(n);
             printf("IF statement:\n");
@@ -217,12 +217,12 @@ void printTree(struct treeNode* node, int n){
         } else if (node->statementType == WhileStatement) {
             printTab(n);
             printf("While statement:\n");
-            printTab(n);
+            printTab(n + 1);
             printf("Conditions:\n");
-            printTree(node->children[0],n + 1);
-            printTab(n);
+            printTree(node->children[0],n + 2);
+            printTab(n + 1);
             printf("While Body:\n");
-            printTree(node->children[1], n + 1);
+            printTree(node->children[1], n + 2);
         } else if (node->statementType == ExpressStatement) {
             printTab(n);
             if (node->expressionType == Operator) {
@@ -244,9 +244,9 @@ void printTree(struct treeNode* node, int n){
         } else if (node->statementType == ReturnStatement) {
             printTab(n);
             printf("Return statement:\n");
-            printTab(n);
+            printTab(n + 1);
             printf("Return value:\n");
-            printTree(node->children[0], n + 1);
+            printTree(node->children[0], n + 2);
         } else if (node->statementType == ParameterStatement) {
             if (node->identifierType == VOID) {
                 printTab(n);
@@ -261,7 +261,7 @@ void printTree(struct treeNode* node, int n){
         } else if (node->statementType == DeclareStatement) {
             printTab(n);
             printf("Declare statement:\n");
-            printTab(n);
+            printTab(n + 1);
             printf("Type:");
             printType(node->identifierType);
             if (node->identifierType == INT || node->identifierType == CHAR) {
@@ -283,13 +283,13 @@ void printTab(int n){
 
 void printType(int type){
     if (type == INT) {
-        printf("INT");
+        printf("INT       ");
     } else if (type == CHAR) {
-        printf("CHAR");
+        printf("CHAR      ");
     } else if (type == VOID) {
-        printf("VOID");
+        printf("VOID      ");
     } else if (type == INTARRAY) {
-        printf("INT ARRAY");
+        printf("INT ARRAY ");
     } else if (type == CHARARRAY) {
         printf("CHAR ARRAY");
     }

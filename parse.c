@@ -55,6 +55,9 @@ int parseBaseType(){
     } else if (token == INT) {
         match(INT);
         return INT;
+    } else {
+        printf("line: %d Type Error!\n",line);
+        exit(1);
     }
 }
 
