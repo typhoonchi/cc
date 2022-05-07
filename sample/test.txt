@@ -1,23 +1,10 @@
-/*int add(int x, int y, int z){
-    int ret;
-    ret = x + y;
-    return ret;
-}
-
-int main(int a){
-    int b[5];
-    if ((a > 0) && (a < 5)) {
-        a = (a + 1) * 5;
-        b[2] = b[1] / 2;
-    } else {
-        a = a & b[0] + add(1, 5);
-    }
-    return 0;
-}
+/*int add(int x, int y, int z);
 */
+
 #include <stdio.h>
 
-
+int gl;
+//in a;
 int add(int x, int y){
     int ret;
     int res;
@@ -27,6 +14,9 @@ int add(int x, int y){
 
 int mul(int x, int y, int z) {
     int ret;
+    //int ret;
+    //int res;
+    ret = x + y + z;
     ret = x * y + y / (z + x);
     return ret;
 }
@@ -47,3 +37,9 @@ int main() {
     }
     return 0;
 }
+
+/*int main(){
+    int a;
+    //int b;
+    a = a + b;
+}*/

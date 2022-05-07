@@ -16,25 +16,26 @@ void match(int expected) {
 
 void checkNewId() {
     if (token != Id) {
-        printf("line %d: invalid identifier\n", line);
+        printf("line %d: invalid identifier: %s\n", line, tokenString);
         exit(1);
     }
     if (symbolPtr->class != 0) {
-        printf("line %d: duplicate declaration\n", line);
+        printf("line %d: duplicate declaration: %s\n", line, tokenString);
         exit(1);
     }
 }
 
 void checkLocalId() {
     if (token != Id) {
-        printf("line %d: invalid identifier\n", line);
+        printf("line %d: invalid identifier: %s\n", line, tokenString);
         exit(1);
     }
     if (symbolPtr->class == Loc) {
-        printf("line %d: duplicate declaration\n", line);
+        printf("line %d: duplicate declaration: %s\n", line, tokenString);
         exit(1);
     }
 }
+
 void hideGlobalId(){
     symbolPtr->gClass = symbolPtr->class;
     symbolPtr->gType = symbolPtr->type;
@@ -57,35 +58,38 @@ int parseBaseType(){
     }
 }
 
-/*
- * int res
- *
- * (int a, int b[], char c){
- * int ret;
- * a = b[1] + c;
- * add(1,2);
- * return a;
- *
- * }
- * */
+void push(struct treeNode* node) {
+    symbolStack[top++] = node;
+}
+struct treeNode* pop(void) {
+    if (top == 0) {
+        printf("Expression Stack Error!\n");
+        exit(1);
+    }
+    return symbolStack[--top];
+}
+
+// 解析函数
 struct treeNode* parseFunction(int type, char* name){
-    struct treeNode* t = createNode();
+    // 创建函数根节点
+    struct treeNode* node = createNode(Function, 0, 0);
+    node->identifierType = type;
+    node->name = name;
     match('(');
-    t->type = type;
-    t->name = name;
-    t->nodeType = Function;
-    // 匹配参数列表
+    // 解析参数列表
     if (token == ')') {
-        t->children[0] = createNode();
-        t->children[0]->nodeType = ParameterStatement;
-        t->children[0]->type = VOID;
+        // 空参列表 void
+        node->children[0] = createNode(ParameterStatement, 0, 0);
+        node->children[0]->identifierType = VOID;
     } else {
-        t->children[0] = parseParameters();
+        // 有参列表 解析参数列表
+        node->children[0] = parseParameters();
     }
     match(')');
     match('{');
-    // 匹配函数体
-    t->children[1] = parseFunctionBody();
+    // 解析函数体
+    node->children[1] = parseFunctionBody();
+    // 恢复全局变量
     symbolPtr = symbolTable;
     while (symbolPtr->token != 0) {
         if (symbolPtr->class == Loc) {
@@ -93,282 +97,267 @@ struct treeNode* parseFunction(int type, char* name){
         }
         symbolPtr++;
     }
-    return t;
+    return node;
 }
 
-/*
- * (
- *
- * int a, int b[], char c
- *
- * )
- * */
+// 解析参数列表
 struct treeNode* parseParameters(void){
-    struct treeNode* t = createNode();
-    char* idName;
-    t->type = parseBaseType();
-    idName = tokenString;
+    // 创建参数列表根节点
+    struct treeNode* node = createNode(ParameterStatement, 0, 0);
+    node->identifierType = parseBaseType();
+    node->name = tokenString;
     match(Id);
-    t->name = idName;
-    t->nodeType = ParameterStatement;
     if (token == Bracket) {
+        // 匹配数组参数
         match(Bracket);
         match(']');
     }
     if (token == ',') {
+        // 匹配后续参数
         match(',');
-        t->sibling = parseParameters();
+        node->sibling = parseParameters();
     }
-    return t;
+    return node;
 }
-/*
- * {
- *
- * int ret;
- * a = b[1] + c;
- * add(1,2);
- * return a;
- *
- * }
- * */
+
+// 解析函数体
 struct treeNode* parseFunctionBody(void){
-    struct treeNode* t = NULL;
-    struct treeNode* last;
+    // 创建函数体根节点
+    struct treeNode* node = NULL;
+    struct treeNode* lastSibling;
     int type;
-    char* idName;
+    char* identifierName;
+    // 解析局部变量生命语句
     while (token == INT || token == CHAR) {
         type = parseBaseType();
-        idName = tokenString;
+        identifierName = tokenString;
         checkLocalId();
         hideGlobalId();
         symbolPtr->class = Loc;
         symbolPtr->type = type;
         match(Id);
-        if (t == NULL) {
-            t = parseDeclaration(type, idName, 1);
+        if (node == NULL) {
+            // 空指针 直接指向第一条声明语句
+            node = parseDeclaration(type, identifierName, 1);
         } else {
-            last = t;
-            while (last->sibling != NULL) {
-                last = last->sibling;
+            // 非空指针 寻找到最后一个兄弟节点处
+            lastSibling = node;
+            while (lastSibling->sibling != NULL) {
+                lastSibling = lastSibling->sibling;
             }
-            last->sibling = parseDeclaration(type,idName,1);
+            // 该兄弟节点指向声明语句
+            lastSibling->sibling = parseDeclaration(type,identifierName,1);
         }
         match(';');
     }
+    // 解析非声明语句
     while (token != '}') {
-        if (t ==  NULL) {
-            t = parseStatement();
+        if (node ==  NULL) {
+            // 空指针 直接指向语句
+            node = parseStatement();
         } else {
-            last = t;
-            while (last->sibling != NULL) {
-                last = last->sibling;
+            // 非空指针 寻找到最后一个兄弟结点处
+            lastSibling = node;
+            while (lastSibling->sibling != NULL) {
+                lastSibling = lastSibling->sibling;
             }
-            last->sibling = parseStatement();
+            // 该兄弟节点指向语句
+            lastSibling->sibling = parseStatement();
         }
     }
-    return t;
+    return node;
 }
 
-/*
- * int a
- *
- * [5], b, c, d
- *
- * ;
- * */
+// 解析声明语句
 struct treeNode* parseDeclaration(int type, char* name, int mode){
-    struct treeNode* t = createNode();
-    char* idName;
-    t->type = type;
-    t->name = name;
-    t->nodeType = DeclareStatement;
+    // 创建声明语句节点
+    struct treeNode* node = createNode(DeclareStatement, 0, 0);
+    char* identifierName;
+    node->identifierType = type;
+    node->name = name;
     if (token == Bracket) {
+        // 解析数组声明
         if (symbolPtr->type == INT) {
             symbolPtr->type = INTARRAY;
-            t->type = INTARRAY;
+            node->identifierType = INTARRAY;
         } else if (symbolPtr->type == CHAR) {
             symbolPtr->type = CHARARRAY;
-            t->type = CHARARRAY;
+            node->identifierType = CHARARRAY;
         }
         match(Bracket);
-        t->isArray = true;
-        t->size = tokenValue;
+        node->isArray = true;
+        node->size = tokenValue;
         match(Num);
         match(']');
     }
     if (token == ',') {
+        // 解析逗号
         match(',');
-        idName = tokenString;
+        identifierName = tokenString;
         if (mode) {
+            /*
+             * 0 全局变量
+             * 1 局部变量
+             */
             checkLocalId();
             hideGlobalId();
             symbolPtr->class = Loc;
             symbolPtr->type = type;
+        } else {
+            symbolPtr->class = Glo;
+            symbolPtr->type = type;
         }
         match(Id);
-        t->sibling = parseDeclaration(t->type,idName, mode);
+        // 继续解析声明语句
+        node->sibling = parseDeclaration(node->identifierType,identifierName, mode);
     }
-    return t;
-}
-/*
- * a = b[1] + c;
- * if (a > 0) {
- *      c = 1;
- * }
- * while (a) {
- *      a--;
- * }
- * add(1,2);
- * return a;
- *
- * */
-struct treeNode* parseStatement() {
-    struct treeNode* t = NULL;
-    if (token == IF) {
-        t = parseIfStatement();
-    } else if (token == WHILE) {
-        t = parseWhileStatement();
-    } else if (token == RETURN) {
-        t = parseReturnStatement();
-    } else if (token == ';') {
-        match(';');
-    } else {
-        t = parseExpressionStatement(Assign);
-    }
-    return t;
+    return node;
 }
 
-/*
- * if (a > 0) {
- *      c = 1;
- * } else {
- *      c = 2;
- * }
- * */
+// 解析语句
+struct treeNode* parseStatement() {
+    // 创建语句根节点
+    struct treeNode* node = NULL;
+    if (token == IF) {
+        // 匹配 If 语句
+        node = parseIfStatement();
+    } else if (token == WHILE) {
+        // 匹配 While 语句
+        node = parseWhileStatement();
+    } else if (token == RETURN) {
+        // 匹配 Return 语句
+        node = parseReturnStatement();
+    } else if (token == ';') {
+        // 匹配空语句 直接跳过
+        match(';');
+    } else {
+        // 匹配表达式语句
+        node = parseExpressionStatement(Assign);
+    }
+    return node;
+}
+
+// 解析 If 语句
 struct treeNode* parseIfStatement(){
-    struct treeNode* t = createNode();
-    struct treeNode* last;
-    t->nodeType = IfStatement;
+    // 创建 If 语句根节点
+    struct treeNode* node = createNode(IfStatement, 0, 0);
+    struct treeNode* lastSibling;
     match(IF);
     match('(');
-    t->children[0] = parseExpressionStatement(Assign);
+    // 解析条件表达式
+    node->children[0] = parseExpressionStatement(Assign);
     match(')');
     match('{');
     while (token != '}') {
-        if (t->children[1] == NULL) {
-            t->children[1] = parseStatement();
+        // 解析成功分支语句
+        if (node->children[1] == NULL) {
+            node->children[1] = parseStatement();
         } else {
-            last = t->children[1];
-            while (last->sibling != NULL) {
-                last = last->sibling;
+            lastSibling = node->children[1];
+            while (lastSibling->sibling != NULL) {
+                lastSibling = lastSibling->sibling;
             }
-            last->sibling = parseStatement();
+            lastSibling->sibling = parseStatement();
         }
     }
     match('}');
     if (token == ELSE) {
+        // 如果有 else 语句
         match(ELSE);
         match('{');
         while (token != '}') {
-            if (t->children[2] == NULL) {
-                t->children[2] = parseStatement();
+            // 解析失败分支
+            if (node->children[2] == NULL) {
+                node->children[2] = parseStatement();
             } else {
-                last = t->children[2];
-                while (last->sibling != NULL) {
-                    last = last->sibling;
+                lastSibling = node->children[2];
+                while (lastSibling->sibling != NULL) {
+                    lastSibling= lastSibling->sibling;
                 }
-                last->sibling = parseStatement();
+                lastSibling->sibling = parseStatement();
             }
         }
         match('}');
     }
-    return t;
+    return node;
 }
 
-/*
- * while (a) {
- *      a--;
- * }
- * */
+// 解析 While 语句
 struct treeNode* parseWhileStatement(){
-    struct treeNode* t = createNode();
-    struct treeNode* last;
-    t->nodeType = WhileStatement;
+    struct treeNode* node = createNode(WhileStatement, 0, 0);
+    struct treeNode* lastSibling;
     match(WHILE);
     match('(');
-    t->children[0] = parseExpressionStatement(Assign);
+    // 解析条件语句
+    node->children[0] = parseExpressionStatement(Assign);
     match(')');
     match('{');
     while (token != '}') {
-        if (t->children[1] == NULL) {
-            t->children[1] = parseStatement();
+        // 解析循环体语句
+        if (node->children[1] == NULL) {
+            node->children[1] = parseStatement();
         } else {
-            last = t->children[1];
-            while (last->sibling != NULL) {
-                last = last->sibling;
+            lastSibling = node->children[1];
+            while (lastSibling->sibling != NULL) {
+                lastSibling = lastSibling->sibling;
             }
-            last->sibling = parseStatement();
+            lastSibling->sibling = parseStatement();
         }
     }
     match('}');
-    return t;
+    return node;
 }
 
-/*
- * return a + b;
- * */
+// 解析返回语句
 struct treeNode* parseReturnStatement(){
-    struct treeNode* t = createNode();
-    t->nodeType = ReturnStatement;
+    struct treeNode* node = createNode(ReturnStatement,0, 0);
     match(RETURN);
-    t->children[0] = parseExpressionStatement(Assign);
+    node->children[0] = parseExpressionStatement(Assign);
     match(';');
-    return t;
+    return node;
 }
 
-/*
- * a = b + c * d;
- * ch = 'a';
- * a++;
- * res = add(1,2) + c & d;
- * !(a > 0) && (b <= 0)
- * 3 <= a
- * ((a = 1) >= 0) || !((b = 2) < 0)
- * */
+// 解析表达式
 struct treeNode* parseExpressionStatement(int operator){
-    struct treeNode* t;
+    struct treeNode* node;
     struct treeNode* temp;
     if (token == Num) {
-        t = createNode();
-        t->nodeType = ExpressStatement;
-        t->type = INT;
-        t->value = tokenValue;
-        t->valType = Constant;
-        symbolStack[top++] = t;
+        node = createNode(ExpressStatement, Constant, 0);
+        node->identifierType = INT;
+        node->value = tokenValue;
+        push(node);
         match(Num);
+    } else if (token == Char){
+        node = createNode(ExpressStatement, Constant, 0);
+        node->identifierType = CHAR;
+        node->value = tokenValue;
+        push(node);
+        match(Char);
     } else if (token == Id) {
-        t = createNode();
-        temp = t;
-        t->nodeType = ExpressStatement;
-        t->name = tokenString;
-        t->valType = Identifier;
+        node = createNode(ExpressStatement, Identifier, 0);
+        temp = node;
+        node->name = tokenString;
         match(Id);
+        if (token == Id){
+            printf("line %d: invalid expression statement\n", line);
+            exit(1);
+        }
         if (token == '(') {
             if (symbolPtr->class != Fun) {
                 printf("line %d: invalid function call\n",line);
                 exit(1);
             }
-            t->valType = Call;
+            node->expressionType = Call;
             match('(');
             while (token != ')') {
-                if (t->children[0] != NULL) {
-                    temp = t->children[0];
+                if (node->children[0] != NULL) {
+                    temp = node->children[0];
                     while (temp->sibling != NULL) {
                         temp = temp->sibling;
                     }
                     temp->sibling = parseExpressionStatement(Assign);
                 } else {
-                    t->children[0] = parseExpressionStatement(Assign);
+                    node->children[0] = parseExpressionStatement(Assign);
                 }
                 if (token == ',') {
                     match(',');
@@ -377,24 +366,22 @@ struct treeNode* parseExpressionStatement(int operator){
             match(')');
         } else {
             if (symbolPtr->class == Glo) {
-                t->value = symbolPtr->gValue;
+                node->value = symbolPtr->gValue;
             } else if (symbolPtr->class == Loc) {
-                t->value = symbolPtr->value;
+                node->value = symbolPtr->value;
             }
         }
-        symbolStack[top++] = t;
+        push(node);
     } else if (token == '(') {
         match('(');
-        t = parseExpressionStatement(Assign);
+        node = parseExpressionStatement(Assign);
         match(')');
-        symbolStack[top++] = t;
+        push(node);
     } else if (token == '!') {
-        t = createNode();
-        t->valType = Operator;
-        t->opType = '!';
+        node = createNode(ExpressStatement, Operator, '!');
         match('!');
-        t->children[0] = parseExpressionStatement(Inc);
-        symbolStack[top++] = t;
+        node->children[0] = parseExpressionStatement(Inc);
+        push(node);
     } else {
         printf("line %d: invalid expression\n", line);
         exit(1);
@@ -402,191 +389,131 @@ struct treeNode* parseExpressionStatement(int operator){
     while (token >= operator) {
         if (token == Assign) {
             match(Assign);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Assign;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Assign);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Assign);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Assign);
+            push(node);
         } else if (token == Lor) {
             match(Lor);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Lor;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Land);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Lor);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Land);
+            push(node);
         } else if (token == Land) {
             match(Land);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Land;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Or);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Land);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Or);
+            push(node);
         } else if (token == Or) {
             match(Or);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Or;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Xor);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Or);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Xor);
+            push(node);
         } else if (token == Xor) {
             match(Xor);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Xor;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(And);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Xor);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(And);
+            push(node);
         } else if (token == And) {
             match(And);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = And;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Eq);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, And);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Eq);
+            push(node);
         } else if (token == Eq) {
             match(Eq);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Eq;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Ne);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Eq);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Ne);
+            push(node);
         } else if (token == Ne) {
             match(Ne);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Ne;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Lt);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Ne);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Lt);
+            push(node);
         } else if (token == Lt) {
             match(Lt);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Lt;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Gt);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Lt);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Gt);
+            push(node);
         } else if (token == Gt) {
             match(Gt);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Gt;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Le);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Gt);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Le);
+            push(node);
         } else if (token == Le) {
             match(Le);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Le;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Ge);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Le);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Ge);
+            push(node);
         } else if (token == Ge) {
             match(Ge);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Ge;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Shl);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Ge);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Shl);
+            push(node);
         } else if (token == Shl) {
             match(Shl);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Shl;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Shr);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Shl);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Shr);
+            push(node);
         } else if (token == Shr) {
             match(Shr);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Shr;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Add);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Shr);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Add);
+            push(node);
         } else if (token == Add) {
             match(Add);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Add;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Mul);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Add);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Mul);
+            push(node);
         } else if (token == Sub) {
             match(Sub);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Sub;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Mul);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Sub);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Mul);
+            push(node);
         } else if (token == Mul) {
             match(Mul);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Mul;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Bracket);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Mul);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Bracket);
+            push(node);
         } else if (token == Div) {
             match(Div);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Div;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Bracket);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Div);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Bracket);
+            push(node);
         } else if (token == Mod) {
             match(Mod);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Mod;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Bracket);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Mod);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Bracket);
+            push(node);
         } else if (token == Bracket) {
             match(Bracket);
-            t = createNode();
-            t->nodeType = ExpressStatement;
-            t->valType = Operator;
-            t->opType = Bracket;
-            t->children[0] = symbolStack[--top];
-            t->children[1] = parseExpressionStatement(Bracket);
-            symbolStack[top++] = t;
+            node = createNode(ExpressStatement, Operator, Bracket);
+            node->children[0] = pop();
+            node->children[1] = parseExpressionStatement(Bracket);
+            push(node);
             match(']');
         } else {
-            printf("%d: invalid token\n", line);
+            printf("%d: invalid token: %s\n", line, tokenString);
             exit(1);
         }
     }
-    return symbolStack[--top];
+    return pop();
 }
 
 void parse(void) {
@@ -596,7 +523,6 @@ void parse(void) {
     struct treeNode* temp, * last;
     getToken();
     while (token > 0) {
-        temp = createNode();
         if (token == INT || token == CHAR) {
             // 获取标识符类型
             baseType = parseBaseType();
@@ -627,7 +553,8 @@ void parse(void) {
             symbolPtr->type = baseType;
             temp = parseFunction(baseType, idName);
         } else {
-
+            printf("line %d: invalid statement\n", line);
+            exit(1);
         }
         if (root != NULL) {
             last = root;

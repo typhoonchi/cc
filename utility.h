@@ -7,7 +7,7 @@
 
 bool loadSrc(const char* fileName);
 bool init(void);
-struct treeNode* createNode(void);
+struct treeNode* createNode(int statementType, int expressionType, int operatorType);
 void printToken(int lineNo);
 void printSource(int lineNo);
 void printTree(struct treeNode* node, int n);

@@ -24,20 +24,22 @@ enum {IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LI, LC, SI, SC, PUSH,
 
 //关键字与运算符
 enum {
-    Num = 128, Fun, Sys, Glo, Loc, Id, String, Char, INTARRAY, CHARARRAY, Error,
+    Num = 128, Fun, Sys, Glo, Loc, Id, String, Char, INTARRAY, CHARARRAY,
     CHAR, INT, IF, ELSE, RETURN, WHILE, VOID,
     Assign, Lor, Land, Or, Xor, And, Eq, Ne,
     Lt, Gt, Le, Ge, Shl, Shr,
-    Add, Sub, Mul, Div, Mod, Not, Inc, Dec, Bracket
+    Add, Sub, Mul, Div, Mod, Inc, Dec, Bracket
 };
 
+// 表达式中词素的类别 : 运算符 , 常量 , 标识符 , 函数调用
 enum {
     Operator = 1, Constant, Identifier, Call
 };
 
-// 节点类型
+// 节点类型 : If 语句 , While 语句 , 表达式语句 , 返回语句 , 变量声明语句 , 函数定义语句 , 参数语句
 enum {
-    IfStatement = 1, WhileStatement, ExpressStatement, ReturnStatement, DeclareStatement, Function, ParameterStatement
+    IfStatement = 1, WhileStatement, ExpressStatement, ReturnStatement,
+    DeclareStatement, Function, ParameterStatement
 };
 
 struct symbol{
@@ -56,15 +58,14 @@ struct symbol{
 struct treeNode{
     struct treeNode* children[MAXCHILDREN];
     struct treeNode* sibling;
-    int lineNo;     // 行号
-    int nodeType;   // 节点类型
-    int type;       // 函数返回值 或 变量类型
-    long long size; // 数组大小
-    bool isArray;   // 是否是数组
-    int valType;
-    int opType;     // 运算符类型
-    long long value;// 常量值
-    char* name;     // 变量名
+    int statementType;                      // 节点类型
+    int identifierType;                      // 标识符类型
+    long long size;                         // 数组大小
+    bool isArray;                           // 是否是数组
+    int expressionType;                     // 表达式词素类别
+    int operatorType;                       // 运算符类型
+    long long value;                        // 常量值
+    char* name;                             // 变量名
 };
 
 extern char* source;

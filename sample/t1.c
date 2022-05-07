@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-
 int add(int x, int y){
     int ret;
     ret = x + y;
@@ -13,7 +12,7 @@ int mul(int x, int y, int z) {
     return ret;
 }
 
-int main(int x) {
+int main() {
     int a;
     int b[5];
     a = mul(1,2,1);

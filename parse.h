@@ -13,6 +13,9 @@ void hideGlobalId();
 void recoverGlobalId();
 void parse(void);
 int parseBaseType(void);
+void push(struct treeNode* node);
+struct treeNode* pop(void);
+
 struct treeNode* parseStatement(void);
 struct treeNode* parseFunction(int type, char* name);
 struct treeNode* parseParameters(void);

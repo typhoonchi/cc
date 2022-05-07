@@ -39,8 +39,7 @@ bool loadSrc(const char* fileName){
 
 bool init(void) {
     symbolTable = (struct symbol*)malloc(MAXSIZE * sizeof(struct symbol));
-//    root = (struct treeNode*) malloc(sizeof(struct treeNode));
-    symbolStack = (struct treeNode*) malloc(STACKSIZE * sizeof(struct treeNode));
+    symbolStack = (struct treeNode**) malloc(STACKSIZE * sizeof(struct treeNode*));
     top = 0;
     if (symbolTable == NULL || symbolStack == NULL) {
         return false;
@@ -169,30 +168,30 @@ void printSource(int lineNo){
     }
 }
 
-struct treeNode* createNode(void){
-    struct treeNode* t = (struct treeNode*) malloc(sizeof(struct treeNode));
-    if (t == NULL) {
+struct treeNode* createNode(int statementType, int expressionType, int operatorType){
+    struct treeNode* node = (struct treeNode*) malloc(sizeof(struct treeNode));
+    if (node == NULL) {
         exit(1);
     }
+    node->statementType = statementType;
     for (int i = 0; i < MAXCHILDREN; i++) {
-        t->children[i] = NULL;
+        node->children[i] = NULL;
     }
-    t->sibling = NULL;
-    t->isArray = false;
-    t->size = 1;
-    t->valType = 0;
-    t->opType = 0;
-    t->lineNo = line;
-    return t;
+    node->sibling = NULL;
+    node->size = 1;
+    node->isArray = false;
+    node->expressionType = expressionType;
+    node->operatorType = operatorType;
+    return node;
 }
 
 void printTree(struct treeNode* node, int n){
     struct treeNode* temp;
     while (node != NULL) {
-        if (node->nodeType == Function) {
+        if (node->statementType == Function) {
             printTab(n);
             printf("Function name:%s\ttype:",node->name);
-            printType(node->type);
+            printType(node->identifierType);
             printf("\n");
 
             printTab(n);
@@ -201,8 +200,7 @@ void printTree(struct treeNode* node, int n){
             printTab(n);
             printf("Function Body:\n");
             printTree(node->children[1], n + 1);
-            printf("\n");
-        } else if (node->nodeType == IfStatement) {
+        } else if (node->statementType == IfStatement) {
             printTab(n);
             printf("IF statement:\n");
             printTab(n);
@@ -216,8 +214,7 @@ void printTree(struct treeNode* node, int n){
                 printf("Failure condition:\n");
                 printTree(node->children[2], n + 1);
             }
-            printf("\n");
-        } else if (node->nodeType == WhileStatement) {
+        } else if (node->statementType == WhileStatement) {
             printTab(n);
             printf("While statement:\n");
             printTab(n);
@@ -226,51 +223,52 @@ void printTree(struct treeNode* node, int n){
             printTab(n);
             printf("While Body:\n");
             printTree(node->children[1], n + 1);
-            printf("\n");
-        } else if (node->nodeType == ExpressStatement) {
+        } else if (node->statementType == ExpressStatement) {
             printTab(n);
-            if (node->valType == Operator) {
-                printOperator(node->opType);
+            if (node->expressionType == Operator) {
+                printOperator(node->operatorType);
                 printf("\n");
-            } else if (node->valType == Constant) {
-                printf("Num:%lld\n",node->value);
-            } else if (node->valType == Identifier) {
+            } else if (node->expressionType == Constant) {
+                if (node->identifierType == CHAR){
+                    printf("Char:'%c'\n",(char)node->value);
+                } else {
+                    printf("Num:%lld\n",node->value);
+                }
+            } else if (node->expressionType == Identifier) {
                 printf("Id:%s\n",node->name);
-            } else if (node->valType == Call) {
+            } else if (node->expressionType == Call) {
                 printf("Function call:%s\n",node->name);
             }
             printTree(node->children[0], n + 1);
             printTree(node->children[1], n + 1);
-        } else if (node->nodeType == ReturnStatement) {
+        } else if (node->statementType == ReturnStatement) {
             printTab(n);
             printf("Return statement:\n");
             printTab(n);
             printf("Return value:\n");
             printTree(node->children[0], n + 1);
-            printf("\n");
-        } else if (node->nodeType == ParameterStatement) {
-            if (node->type == VOID) {
+        } else if (node->statementType == ParameterStatement) {
+            if (node->identifierType == VOID) {
                 printTab(n);
-                printType(node->type);
+                printType(node->identifierType);
                 printf("\n");
             } else {
                 printTab(n);
                 printf("%s(",node->name);
-                printType(node->type);
+                printType(node->identifierType);
                 printf(")\n");
             }
-        } else if (node->nodeType == DeclareStatement) {
+        } else if (node->statementType == DeclareStatement) {
             printTab(n);
             printf("Declare statement:\n");
             printTab(n);
             printf("Type:");
-            printType(node->type);
-            if (node->type == INT || node->type == CHAR) {
+            printType(node->identifierType);
+            if (node->identifierType == INT || node->identifierType == CHAR) {
                 printf("\tid name:%s\n",node->name);
             } else {
                 printf("\tid name:%s\tsize:%lld\n",node->name,node->size);
             }
-            printf("\n");
         }
         node = node->sibling;
     }
@@ -279,7 +277,7 @@ void printTree(struct treeNode* node, int n){
 
 void printTab(int n){
     for (int i = 0; i < n; i++) {
-        printf("\t");
+        printf("\t|");
     }
 }
 
@@ -336,6 +334,8 @@ void printOperator(int op){
             printf("bracket([])");
             break;
         case '!':
+            printf("Not(!)");
+            break;
         case ']':
         case '(':
         case ')':

@@ -12,14 +12,9 @@ void getToken(void){
     memset(tokenString, 0, BUFFERSIZE * sizeof(char));
     char* chPtr = NULL;
 
-    // 定位到空符号表
-/*    while (symbolPtr->token != 0) {
-        symbolPtr++;
-    }*/
     // 取字符
     while ((token = (unsigned char)*source) != '\0') {
         // 取字符
-//        token = (unsigned char)*source;
         // 缓冲区指针移动, 向前看一个
         source++;
         // DFA
@@ -101,8 +96,6 @@ void getToken(void){
                 }
             }
             // 插入符号表
-//            token = symbolPtr->token = Num;
-//            symbolPtr->value = tokenValue;
             token = Num;
             break;
         } else if (token == '"' || token == '\'') {
@@ -127,13 +120,9 @@ void getToken(void){
             if (token == '"') {
                 // 记录到符号表
                 token = String;
-//                token = symbolPtr->token = String;
-//                symbolPtr->name = tokenString;
             } else {
                 // 记录到符号表
                 token = Char;
-//                token = symbolPtr->token = Char;
-//                symbolPtr->value = tokenValue;
             }
             break;
         } else if (token == '/') {
@@ -161,8 +150,6 @@ void getToken(void){
                 source += 2;
             } else {
                 // 处理除法并记录
-//                tokenValue = symbolPtr->value = token;
-//                token = symbolPtr->token = Div;
                 token = Div;
                 break;
             }
@@ -171,13 +158,9 @@ void getToken(void){
             if (*source == '=') {
                 // 处理等于
                 source++;
-//                token = symbolPtr->token = Eq;
-//                symbolPtr->name = "==";
                 token = Eq;
             } else {
                 // 处理赋值
-//                tokenValue = symbolPtr->value = token;
-//                token = symbolPtr->token = Assign;
                 token = Assign;
             }
             break;
@@ -186,13 +169,9 @@ void getToken(void){
             if (*source == '+') {
                 // 处理自增
                 source++;
-//                token = symbolPtr->token = Inc;
-//                symbolPtr->name = "++";
                 token = Inc;
             } else {
                 // 处理加法
-//                tokenValue = symbolPtr->value = token;
-//                token = symbolPtr->token = Add;
                 token = Add;
             }
             break;
@@ -201,26 +180,18 @@ void getToken(void){
             if (*source == '-') {
                 // 处理自减
                 source++;
-//                symbolPtr->token = Dec;
-//                symbolPtr->name = "--";
                 token = Dec;
             } else {
                 // 处理减法
-//                symbolPtr->token = Sub;
-//                symbolPtr->value = token;
                 token = Sub;
             }
             break;
         } else if (token == '*') {
             // 处理乘法
-//            symbolPtr->token = Mul;
-//            symbolPtr->value = token;
             token = Mul;
             break;
         } else if (token == '%') {
             // 处理取模
-//            symbolPtr->token = Mod;
-//            symbolPtr->value = token;
             token = Mod;
             break;
         } else if (token == '!') {
@@ -228,13 +199,9 @@ void getToken(void){
             if (*source == '=') {
                 // 处理不等于
                 source++;
-//                symbolPtr->token = Ne;
-//                symbolPtr->name = "!=";
                 token = Ne;
             } else {
                 // 处理非运算
-//                symbolPtr->token = Not;
-//                symbolPtr->value = token;
                 break;
             }
             break;
@@ -243,13 +210,9 @@ void getToken(void){
             if (*source == '&') {
                 // 处理逻辑与
                 source++;
-//                symbolPtr->token = Land;
-//                symbolPtr->name = "&&";
                 token = Land;
             } else {
                 // 处理按位与
-//                symbolPtr->token = And;
-//                symbolPtr->value = token;
                 token = And;
             }
             break;
@@ -258,20 +221,14 @@ void getToken(void){
             if (*source == '|') {
                 // 处理逻辑或
                 source++;
-//                symbolPtr->token = Lor;
-//                symbolPtr->name = "||";
                 token = Lor;
             } else {
                 // 处理按位或
-//                symbolPtr->token = Or;
-//                symbolPtr->value = token;
                 token = Or;
             }
             break;
         } else if (token == '^') {
             // 处理异或
-//            symbolPtr->token = Xor;
-//            symbolPtr->value = token;
             token = Xor;
             break;
         } else if (token == '<') {
@@ -279,19 +236,13 @@ void getToken(void){
             if (*source == '=') {
                 // 处理小于等于
                 source++;
-//                symbolPtr->token = Le;
-//                symbolPtr->name = "<=";
                 token = Le;
             } else if (*source == '<'){
                 // 处理左移
                 source++;
-//                symbolPtr->token = Shl;
-//                symbolPtr->name = "<<";
                 token = Shl;
             } else {
                 // 处理小于
-//                symbolPtr->token = Lt;
-//                symbolPtr->value = token;
                 token = Lt;
             }
             break;
@@ -300,19 +251,13 @@ void getToken(void){
             if (*source == '=') {
                 // 处理大于等于
                 source++;
-//                symbolPtr->token = Ge;
-//                symbolPtr->name = ">=";
                 token = Ge;
             } else if (*source == '>'){
                 // 处理右移
                 source++;
-//                symbolPtr->token = Shr;
-//                symbolPtr->name = ">>";
                 token = Shr;
             } else {
                 // 处理大于
-//                symbolPtr->token = Gt;
-//                symbolPtr->value = token;
                 token = Gt;
             }
             break;
@@ -320,9 +265,6 @@ void getToken(void){
             token = Bracket;
             break;
         } else if (token == ']' || token == '(' || token == ')' || token == '{' || token == '}' || token == ';' || token == ',') {
-//            symbolPtr->token = Lbracket;
-//            symbolPtr->value = token;
-//            token = Lbracket;
             break;
         } else {
             exit(1);
