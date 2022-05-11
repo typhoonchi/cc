@@ -16,12 +16,6 @@
 #define BUFFERSIZE 256
 #define MAXCHILDREN 3
 
-//指令集枚举
-// instruction set: copy from c4, change JSR/ENT/ADJ/LEV/BZ/BNZ to CALL/NVAR/DARG/RET/JZ/JNZ.
-enum {IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LI, LC, SI, SC, PUSH,
-    OR, XOR, AND, EQ, NE, LT, GT, LE, GE, SHL, SHR, ADD, SUB, MUL, DIV, MOD,
-    OPEN, READ, CLOS, PRTF, MALC, FREE, MSET, MCMP, EXIT};
-
 //关键字与运算符
 enum {
     Num = 128, Fun, Sys, Glo, Loc, Id, String, Char, INTARRAY, CHARARRAY,

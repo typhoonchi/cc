@@ -5,12 +5,18 @@
 #include "scan.h"
 #include "utility.h"
 
-/* 词法分析 */
+/* 词法分析
+ *
+ * */
 void getToken(void){
     int index = 0;
-    tokenString = malloc(BUFFERSIZE * sizeof(char));
-    memset(tokenString, 0, BUFFERSIZE * sizeof(char));
     char* chPtr = NULL;
+    tokenString = malloc(BUFFERSIZE * sizeof(char));
+    if (tokenString == NULL) {
+        printErrorInformation("Fail to create tokenString", NULL);
+        exit(1);
+    }
+    memset(tokenString, 0, BUFFERSIZE * sizeof(char));
 
     // 取字符
     while ((token = (unsigned char)*source) != '\0') {
@@ -262,11 +268,14 @@ void getToken(void){
             }
             break;
         } else if (token == '[') {
+            // 处理下标
             token = Bracket;
             break;
         } else if (token == ']' || token == '(' || token == ')' || token == '{' || token == '}' || token == ';' || token == ',') {
+            // 处理其余符号
             break;
         } else {
+            printErrorInformation("Get Unknown token",NULL);
             exit(1);
         }
     }
@@ -275,18 +284,25 @@ void getToken(void){
     }
 }
 
+/* 初始化关键字信息
+ *
+ * */
 void initKeywords(void){
+    // 记录标志位信息
     int record;
+    // 关键字信息
     char* keywords[7] = {
             "char", "int", "if", "else", "return", "while", "void"
     };
     record = scanTrace;
     scanTrace = 0;
+    // 扫描关键字
     for (int i = 0; i < 7; i++) {
         source = keywords[i];
         getToken();
         symbolPtr->token = CHAR + i;
     }
+    // 恢复标志位与相关信息
     source = sourceDump;
     scanTrace = record;
 }
