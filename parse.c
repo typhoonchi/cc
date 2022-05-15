@@ -110,7 +110,7 @@ int parseBaseType(){
  *
  * */
 void push(struct treeNode* node) {
-    symbolStack[top++] = node;
+    nodeStack[top++] = node;
 }
 
 /* 出栈
@@ -123,7 +123,7 @@ struct treeNode* pop() {
         printErrorInformation("Get Expression Stack Error", NULL);
         exit(1);
     }
-    return symbolStack[--top];
+    return nodeStack[--top];
 }
 
 /* 解析函数

@@ -3,23 +3,20 @@
 #include "scan.h"
 #include "parse.h"
 
-char* source = NULL;
-char* sourceDump = NULL;
-char* sourcePtr = NULL;
-char* tokenString = NULL;
-FILE* filePtr = NULL;
-long long token, tokenValue;
-int line = 1;
-int scanTrace = 1;
-int sourceTrace = 0;
-int parseTrace = 1;
-struct treeNode* root = NULL;
-struct treeNode** symbolStack;
-int* operatorStack;
-int top;
-// symbol table & pointer
-struct symbol * symbolTable,
-            * symbolPtr;
+char* source = NULL;                // 源代码缓冲区指针
+char* sourceDump = NULL;            // 源代码备份指针
+char* sourcePtr = NULL;             // 源代码打印指针
+char* tokenString = NULL;           // token 名称缓冲区
+FILE* filePtr = NULL;                // 文件指针
+long long token, tokenValue;        // token类型与值
+int line = 1;                       // 行号
+int scanTrace = 1;                  // 是否打印词法分析结果
+int sourceTrace = 1;                // 是否打印源代码
+int parseTrace = 1;                 // 是否打印 AST
+struct treeNode* root = NULL;       // AST 根节点
+struct treeNode** nodeStack;        // 表达式栈
+int top;                            // 栈顶
+struct symbol* symbolTable, * symbolPtr; // 符号表与符号表指针
 
 int main(int argc, char** argv) {
     // 载入源代码
@@ -30,31 +27,15 @@ int main(int argc, char** argv) {
     printf("%s\n",source);
     // 初始化关键字
     initKeywords();
+    // 打印源代码
     if (scanTrace && sourceTrace) {
         printSource(line);
     }
+    // 语法分析
     parse();
     if (parseTrace) {
+        // 打印 AST
         printTree(root, 0);
     }
-//    if (loadSrc(*(argv + 1))) {
-//        if (!init()) {
-//            printErrorInformation("Fail to Init", false);
-//            exit(1);
-//        }
-//        printf("%s\n",source);
-//        initKeywords();
-//        if (scanTrace && sourceTrace) {
-//            printSource(line);
-//        }
-////        while ((*source) != '\0') {
-////            getToken();
-////        }
-//        parse();
-//        printTree(root, 0);
-//    } else {
-//        printErrorInformation("Fail to Load Source File", false);
-//        exit(1);
-//    }
     return 0;
 }

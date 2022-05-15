@@ -47,16 +47,17 @@ void init(void) {
     // 分配符号表存储区
     symbolTable = (struct symbol*)malloc(MAXSIZE * sizeof(struct symbol));
     // 分配表达式栈存储区
-    symbolStack = (struct treeNode**) malloc(STACKSIZE * sizeof(struct treeNode*));
+    nodeStack = (struct treeNode**) malloc(STACKSIZE * sizeof(struct treeNode*));
     // 初始化栈顶
     top = 0;
-    if (symbolTable == NULL || symbolStack == NULL) {
+    if (symbolTable == NULL || nodeStack == NULL) {
         // 初始化失败
         printErrorInformation("Fail to Init", NULL);
         exit(1);
     }
     // 初始化符号表存储区
     memset(symbolTable, 0, MAXSIZE * sizeof(struct symbol));
+    memset(nodeStack, 0, STACKSIZE * sizeof(struct treeNode*));
     // 初始化符号表指针
     symbolPtr = symbolTable;
 }
