@@ -344,9 +344,9 @@ void printTree(struct treeNode* node, int n){
             printType(node->identifierType);
             // 处理声明变量
             if (node->identifierType == INT || node->identifierType == CHAR) {
-                printf("\t\t\t\tid name:%s\n",node->name);
+                printf("\t\t\t\t\t\t\tid name:%s\n",node->name);
             } else {
-                printf("\t\t\t\tid name:%s\t\t\tsize:%lld\n",node->name,node->size);
+                printf("\t\t\t\t\t\t\tid name:%s\t\t\tsize:%lld\n",node->name,node->size);
             }
         }
         // 遍历兄弟结点
@@ -369,18 +369,22 @@ void printTab(int n){
  * @param type 类型
  * */
 void printType(int type){
-    if (type == INT) {
+    if (type == Int) {
         printf("INT");
-    } else if (type == CHAR) {
+    } else if (type == Char) {
         printf("CHAR");
     } else if (type == VOID) {
         printf("VOID");
-    } else if (type == INTARRAY) {
-        printf("INT  ARRAY");
-    } else if (type == CHARARRAY) {
-        printf("CHAR ARRAY");
+    } else if (type > Ptr) {
+        if (type % Ptr == 1) {
+            printf("INT ");
+        } else {
+            printf("CHAR");
+        }
+        for (int i = type / Ptr; i > 0; i--) {
+            printf(" PTR");
+        }
     }
-
 }
 
 /* 打印运算符
@@ -490,8 +494,8 @@ void printErrorInformation(char* error, const char* message){
 void printAssemble(){
     char* instructions [39] = {
         "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG", "RET", "LI", "LC", "SI", "SC", "PUSH",
-                "OR", "XOR", "AND", "EQ", "NE", "LT", "GT", "LE", 'GE', "SHL", "SHR", "ADD", "SUB", "MUL", "DIV", "MOD",
-                "OPEN", "READ", "CLOS", "PRTF", "MALC", "FREE", "MSET", "MCMP", "EXIT"
+                "OR", "XOR", "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL", "SHR", "ADD", "SUB", "MUL", "DIV", "MOD",
+                "OPEN", "READ", "CLOS", "PRINTF", "MALC", "FREE", "MSET", "MCMP", "EXIT"
     };
     long long* dump = codeDump;
     while (codeDump < code) {

@@ -3,8 +3,8 @@
 //
 #include "globals.h"
 #include "utility.h"
-#include "parse.h"
-#include "scan.h"
+#include "parser.h"
+#include "scanner.h"
 
 /* 匹配 token
  *
@@ -88,7 +88,7 @@ void recoverGlobalId(){
 
 /* 解析基本变量类型
  *
- * @return 基本变量类型 :INT CHAR
+ * @return 基本变量类型 :Int Char
  *
  * */
 int parseBaseType(){
@@ -305,7 +305,7 @@ struct treeNode* parseDeclaration(int type, char* name, int mode, long long* num
                 data += tokenValue;
             }
             node->isArray = true;
-            node->size = tokenValue;
+            node->size *= tokenValue;
             size *= tokenValue;
             match(Num);
             match(']');
@@ -743,12 +743,12 @@ struct treeNode* parseExpressionStatement(int operator){
             node = createNode(ExpressStatement, Operator, Add);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Mul);
-            if (tempType > Ptr) {
-                *++code = PUSH;
-                *++code = IMM;
-                *++code = 8;
-                *++code =MUL;
-            }
+//            if (tempType > Ptr) {
+//                *++code = PUSH;
+//                *++code = IMM;
+//                *++code = 8;
+//                *++code =MUL;
+//            }
             *++code = ADD;
             push(node);
             type = tempType;

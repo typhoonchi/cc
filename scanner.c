@@ -2,7 +2,7 @@
 // Created by zhangyukun on 2022/4/11.
 //
 #include "globals.h"
-#include "scan.h"
+#include "scanner.h"
 #include "utility.h"
 
 /* 词法分析
@@ -291,8 +291,8 @@ void initKeywords(void){
     // 记录标志位信息
     int record;
     // 关键字信息
-    char* keywords[7] = {
-            "int", "char", "if", "else", "return", "while", "void"
+    char* keywords[8] = {
+            "int", "char", "if", "else", "return", "while", "void", "printf"
     };
     record = scanTrace;
     scanTrace = 0;
@@ -302,6 +302,11 @@ void initKeywords(void){
         getToken();
         symbolPtr->token = INT + i;
     }
+    source = keywords[7];
+    getToken();
+    symbolPtr->class = Sys;
+    symbolPtr->type = Int;
+    symbolPtr->value = PRINTF;
     // 恢复标志位与相关信息
     source = sourceDump;
     scanTrace = record;

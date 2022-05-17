@@ -20,18 +20,18 @@
 // 虚拟机指令集
 enum {IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LI, LC, SI, SC, PUSH,
     OR, XOR, AND, EQ, NE, LT, GT, LE, GE, SHL, SHR, ADD, SUB, MUL, DIV, MOD,
-    OPEN, READ, CLOS, PRTF, MALC, FREE, MSET, MCMP, EXIT};
+    OPEN, READ, CLOS, PRINTF, MALC, FREE, MSET, MCMP, EXIT};
 
 //关键字与运算符
 enum {
-    Num = 128, Fun, Glo, Loc, Id,
+    Num = 128, Fun, Sys, Glo, Loc, Id,
     INT, CHAR, IF, ELSE, RETURN, WHILE, VOID,
     Assign, Lor, Land, Or, Xor, And, Eq, Ne,
     Lt, Gt, Le, Ge, Shl, Shr,
     Add, Sub, Mul, Div, Mod, Inc, Dec, Bracket
 };
 
-enum {Int = 1, Char, Ptr, String, INTARRAY, CHARARRAY};
+enum {Int = 1, Char, Ptr = 5, String};
 
 // 表达式中词素的类别 : 运算符 , 常量 , 标识符 , 函数调用
 enum {
