@@ -20,7 +20,7 @@ struct treeNode* parseStatement(void);
 struct treeNode* parseFunction(int type, char* name);
 struct treeNode* parseParameters(void);
 struct treeNode* parseFunctionBody(void);
-struct treeNode* parseDeclaration(int type, char* name, int mode);
+struct treeNode* parseDeclaration(int type, char* name, int mode, long long* num);
 struct treeNode* parseIfStatement();
 struct treeNode* parseWhileStatement();
 struct treeNode* parseReturnStatement();

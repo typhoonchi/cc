@@ -292,7 +292,7 @@ void initKeywords(void){
     int record;
     // 关键字信息
     char* keywords[7] = {
-            "char", "int", "if", "else", "return", "while", "void"
+            "int", "char", "if", "else", "return", "while", "void"
     };
     record = scanTrace;
     scanTrace = 0;
@@ -300,7 +300,7 @@ void initKeywords(void){
     for (int i = 0; i < 7; i++) {
         source = keywords[i];
         getToken();
-        symbolPtr->token = CHAR + i;
+        symbolPtr->token = INT + i;
     }
     // 恢复标志位与相关信息
     source = sourceDump;

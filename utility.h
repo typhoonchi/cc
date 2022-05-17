@@ -15,4 +15,5 @@ void printType(int type);
 void printOperator(int op);
 void printTab(int n);
 void printErrorInformation(char* error, const char* message);
+void printAssemble();
 #endif //_UTILITY_H

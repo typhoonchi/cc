@@ -48,18 +48,26 @@ void init(void) {
     symbolTable = (struct symbol*)malloc(MAXSIZE * sizeof(struct symbol));
     // 分配表达式栈存储区
     nodeStack = (struct treeNode**) malloc(STACKSIZE * sizeof(struct treeNode*));
-    // 初始化栈顶
-    top = 0;
-    if (symbolTable == NULL || nodeStack == NULL) {
+    code = (long long*)malloc(MAXSIZE * sizeof(long long));
+    data = (long long*)malloc(MAXSIZE * sizeof(long long));
+    stack = (long long*)malloc(MAXSIZE * sizeof(long long));
+    if (symbolTable == NULL || nodeStack == NULL || code == NULL || data == NULL || stack == NULL) {
         // 初始化失败
         printErrorInformation("Fail to Init", NULL);
         exit(1);
     }
+    // 初始化栈顶
+    top = 0;
+    ibp = 0;
     // 初始化符号表存储区
     memset(symbolTable, 0, MAXSIZE * sizeof(struct symbol));
     memset(nodeStack, 0, STACKSIZE * sizeof(struct treeNode*));
+    memset(code, 0, MAXSIZE * sizeof(long long));
+    memset(data, 0, MAXSIZE * sizeof(long long));
+    memset(stack, 0, MAXSIZE * sizeof(long long));
     // 初始化符号表指针
     symbolPtr = symbolTable;
+    codeDump = code;
 }
 
 /* 打印词素 token
@@ -474,5 +482,26 @@ void printErrorInformation(char* error, const char* message){
         fprintf(stderr,"line %d: %s !\n",line, error);
     } else {
         fprintf(stderr,"line %d: %s: %s !\n",line, error, message);
+    }
+}
+/* 打印汇编结果
+ *
+ * */
+void printAssemble(){
+    char* instructions [39] = {
+        "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG", "RET", "LI", "LC", "SI", "SC", "PUSH",
+                "OR", "XOR", "AND", "EQ", "NE", "LT", "GT", "LE", 'GE', "SHL", "SHR", "ADD", "SUB", "MUL", "DIV", "MOD",
+                "OPEN", "READ", "CLOS", "PRTF", "MALC", "FREE", "MSET", "MCMP", "EXIT"
+    };
+    long long* dump = codeDump;
+    while (codeDump < code) {
+        ++codeDump;
+        fprintf(stdout, "(%lld)  %.4s", (long long)codeDump, instructions[*codeDump]);
+        if (*codeDump < RET) {
+            ++codeDump;
+            fprintf(stdout, "\t%lld\n", *codeDump);
+        } else {
+            fprintf(stdout, "\n");
+        }
     }
 }
