@@ -42,7 +42,7 @@ int main(){
     char c;
     c = 'd';
     x = 1;
-    y = add(x, 3);
-    printf("char = %d\n",y);
+    y = add(4,add(x, 4));
+    printf("y = %d\n",y);
     return 0;
 }

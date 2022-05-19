@@ -153,9 +153,6 @@ struct treeNode* parseFunction(int type, char* name){
     match('{');
     // 解析函数体
     node->children[1] = parseFunctionBody();
-//    if (*code != RET) {
-//        *++code = RET;
-//    }
     // 恢复全局变量
     symbolPtr = symbolTable;
     while (symbolPtr->token != 0) {
@@ -258,8 +255,6 @@ struct treeNode* parseFunctionBody(){
         }
         match(';');
     }
-//    *++code = NVAR;
-//    *++code = num - ibp;
     // 解析非声明语句
     while (token != '}') {
         if (node !=  NULL) {
@@ -371,8 +366,6 @@ struct treeNode* parseStatement() {
  * @return 抽象语法树节点指针, 指向 If 语句子树
  * */
 struct treeNode* parseIfStatement(){
-    //
-//    long long *branchPoint;
     // 创建 If 语句根节点
     struct treeNode* node = createNode(IfStatement, 0, 0);
     struct treeNode* lastSibling;
@@ -382,8 +375,6 @@ struct treeNode* parseIfStatement(){
     node->children[0] = parseExpressionStatement(Assign);
     match(')');
     match('{');
-//    *++code = JZ;
-//    branchPoint = ++code;
     while (token != '}') {
         // 解析成功分支语句
         if (node->children[1] != NULL) {
@@ -401,9 +392,6 @@ struct treeNode* parseIfStatement(){
         // 如果有 else 语句
         match(ELSE);
         match('{');
-//        *branchPoint = (long long)(code + 3);
-//        *++code = JMP;
-//        branchPoint = ++code;
         while (token != '}') {
             // 解析失败分支
             if (node->children[2] != NULL) {
@@ -418,7 +406,6 @@ struct treeNode* parseIfStatement(){
         }
         match('}');
     }
-//    *branchPoint = (long long)(code + 1);
     return node;
 }
 
@@ -427,19 +414,15 @@ struct treeNode* parseIfStatement(){
  * @return 返回抽象语法树节点指针, 指向 While 语句子树
  * */
 struct treeNode* parseWhileStatement(){
-//    long long* loopPoint, *endPoint;
     // 创建 While 语句根节点
     struct treeNode* node = createNode(WhileStatement, 0, 0);
     struct treeNode* lastSibling;
     match(WHILE);
-//    loopPoint = code + 1;
     match('(');
     // 解析条件语句
     node->children[0] = parseExpressionStatement(Assign);
     match(')');
     match('{');
-//    *++code = JZ;
-//    endPoint = ++code;
     while (token != '}') {
         // 解析循环体语句
         if (node->children[1] != NULL) {
@@ -453,9 +436,6 @@ struct treeNode* parseWhileStatement(){
         }
     }
     match('}');
-//    *++code = JMP;
-//    *++code = (long long)loopPoint;
-//    *endPoint = (long long)(code + 1);
     return node;
 }
 
@@ -470,7 +450,6 @@ struct treeNode* parseReturnStatement(){
     // 解析返回表达式
     node->children[0] = parseExpressionStatement(Assign);
     match(';');
-//    *++code = RET;
     return node;
 }
 
@@ -479,11 +458,9 @@ struct treeNode* parseReturnStatement(){
  * @param operator 运算符
  * @return 返回抽象语法树节点指针, 指向表达式语句子树
  * */
-static int type;
 struct treeNode* parseExpressionStatement(int operator){
     struct symbol* tempSymbolPtr;
     long long * tempPtr, num;
-    int tempType;
     // 表达式语句节点
     struct treeNode* node;
     // 临时节点
@@ -493,31 +470,22 @@ struct treeNode* parseExpressionStatement(int operator){
         node = createNode(ExpressStatement, Constant, 0);
         node->identifierType = Int;
         node->value = tokenValue;
-//        *++code = IMM;
-//        *++code = tokenValue;
         push(node);
         match(Num);
-        type = Int;
     } else if (token == Char){
         // 为字符常量创建节点
         node = createNode(ExpressStatement, Constant, 0);
         node->identifierType = Char;
         node->value = tokenValue;
-//        *++code = IMM;
-//        *++code = tokenValue | 0x7F7F7F7F7F7F7F00;
         push(node);
         match(Char);
-        type = Int;
     } else if (token == Char + Ptr) {
         // 为字符常量创建节点
         node = createNode(ExpressStatement, Constant, 0);
         node->identifierType = Char + Ptr;
         node->value = tokenValue;
-//        *++code = IMM;
-//        *++code = tokenValue;
         push(node);
         match(Char + Ptr);
-        type = Int;
     } else if (token == Id) {
         // 为标识符创建节点
         node = createNode(ExpressStatement, Identifier, 0);
@@ -549,7 +517,6 @@ struct treeNode* parseExpressionStatement(int operator){
                 } else {
                     node->children[0] = parseExpressionStatement(Assign);
                 }
-//                *++code = PUSH;
                 num++;
                 if (token != ')') {
                     match(',');
@@ -558,30 +525,12 @@ struct treeNode* parseExpressionStatement(int operator){
             match(')');
             if (tempSymbolPtr->class == Sys) {
                 node->classType = Sys;
-//                *++code = tempSymbolPtr->value;
-            } else {
-//                *++code = CALL;
-//                *++code = tempSymbolPtr->value;
             }
-//            if (num > 0) {
-//                *++code = DARG;
-//                *++code = num;
-//            }
-            type = tempSymbolPtr->type;
         } else {
             // 为标识符节点赋值
             node->value = tempSymbolPtr->value;
             node->identifierType = tempSymbolPtr->type;
             node->classType = tempSymbolPtr->class;
-//            if (tempSymbolPtr->class == Glo) {
-//                *++code = IMM;
-//                *++code = tempSymbolPtr->value;
-//            } else if (tempSymbolPtr->class == Loc) {
-//                *++code = LEA;
-//                *++code = ibp - tempSymbolPtr->value;
-//            }
-            type = tempSymbolPtr->type;
-//            *++code = LI;
         }
         push(node);
     } else if (token == '(') {
@@ -595,12 +544,7 @@ struct treeNode* parseExpressionStatement(int operator){
         node = createNode(ExpressStatement, Operator, '!');
         match('!');
         node->children[0] = parseExpressionStatement(Inc);
-//        *++code = PUSH;
-//        *++code = IMM;
-//        *++code = 0;
-//        *++code = EQ;
         push(node);
-        type = Int;
     } else {
         // 处理错误信息
         printErrorInformation("Get Invalid Expression", NULL);
@@ -608,221 +552,150 @@ struct treeNode* parseExpressionStatement(int operator){
     }
     // 优先级爬山处理表达式运算
     while (token >= operator) {
-        tempType = type;
         // 仅处理优先级不低于当前优先级的运算子表达式
         if (token == Assign) {
             // 处理赋值 =
             match(Assign);
-//            if (*code == LI) {
-//                *code = PUSH;
-//            }
             node = createNode(ExpressStatement, Operator, Assign);
             // 处理左值
             node->children[0] = pop();
             // 处理右值子表达式
             node->children[1] = parseExpressionStatement(Assign);
-//            *++code = SI;
             push(node);
-            type = tempType;
         } else if (token == Lor) {
             // 处理逻辑或 ||
             match(Lor);
-//            *++code = JNZ;
-//            tempPtr = ++code;
             node = createNode(ExpressStatement, Operator, Lor);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Land);
-//            *tempPtr = (long long)(code + 1);
             push(node);
-            type = Int;
         } else if (token == Land) {
             // 处理逻辑与 &&
             match(Land);
-//            *++code = JZ;
-//            tempPtr = ++code;
             node = createNode(ExpressStatement, Operator, Land);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Or);
-//            *tempPtr = (long long)(code + 1);
             push(node);
-            type = Int;
         } else if (token == Or) {
             // 处理按位或 |
             match(Or);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Or);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Xor);
-//            *++code = OR;
             push(node);
-            type = Int;
         } else if (token == Xor) {
             // 处理异或 ^
             match(Xor);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Xor);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(And);
-//            *++code = XOR;
             push(node);
-            type = Int;
         } else if (token == And) {
             // 处理按位与 &
             match(And);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, And);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Eq);
-//            *++code = AND;
             push(node);
-            type = Int;
         } else if (token == Eq) {
             // 处理相等 ==
             match(Eq);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Eq);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Ne);
-//            *++code = EQ;
             push(node);
-            type = Int;
         } else if (token == Ne) {
             // 处理不等 !=
             match(Ne);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Ne);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Lt);
-//            *++code = NE;
             push(node);
-            type = Int;
         } else if (token == Lt) {
             // 处理小于 <
             match(Lt);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Lt);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Gt);
-//            *++code = LT;
             push(node);
-            type = Int;
         } else if (token == Gt) {
             // 处理大于 >
             match(Gt);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Gt);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Le);
-//            *++code = GT;
             push(node);
-            type = Int;
         } else if (token == Le) {
             // 处理小于等于 <=
             match(Le);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Le);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Ge);
-//            *++code = LE;
             push(node);
-            type = Int;
         } else if (token == Ge) {
             // 处理大于等于 >=
             match(Ge);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Ge);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Shl);
-//            *++code = GE;
             push(node);
-            type = Int;
         } else if (token == Shl) {
             // 处理左移 <<
             match(Shl);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Shl);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Shr);
-//            *++code = SHL;
             push(node);
-            type = Int;
         } else if (token == Shr) {
             // 处理右移 >>
             match(Shr);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Shr);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Add);
-//            *++code = SHR;
             push(node);
-            type = Int;
         } else if (token == Add) {
             // 处理加 +
             match(Add);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Add);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Mul);
-//            *++code = ADD;
             push(node);
-            type = tempType;
         } else if (token == Sub) {
             // 处理减 -
             match(Sub);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Sub);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Mul);
-//            *++code = SUB;
             push(node);
         } else if (token == Mul) {
             // 处理乘 *
             match(Mul);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Mul);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Bracket);
-//            *++code = MUL;
             push(node);
-            type = Int;
         } else if (token == Div) {
             // 处理除 /
             match(Div);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Div);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Bracket);
-//            *++code = DIV;
             push(node);
-            type = Int;
         } else if (token == Mod) {
             // 处理取模 %
             match(Mod);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Mod);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Bracket);
-//            *++code = MOD;
             push(node);
-            type = Int;
         } else if (token == Bracket) {
             // 处理下标 []
             match(Bracket);
-//            *++code = PUSH;
             node = createNode(ExpressStatement, Operator, Bracket);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Assign);
-//            if (tempType > Ptr) {
-//                *++code = PUSH;
-//                *++code = IMM;
-//                *++code = 8;
-//                *++code = MUL;
-//            }
-//            *++code = ADD;
-//            *++code = LI;
             push(node);
             match(']');
-            type = tempType - Ptr;
         } else {
             printErrorInformation("Get Invalid Token", tokenString);
             exit(1);
@@ -859,7 +732,6 @@ void parse(void) {
                 // 处理函数定义
                 symbolPtr->class = Fun;
 
-//                symbolPtr->value = (long long)(code + 1);
                 if (!memcmp("main", idName, strlen("main"))) {
                     mainPtr = &(symbolPtr->value);
                 }
