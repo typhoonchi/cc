@@ -51,6 +51,7 @@ void init(void) {
     code = (long long*)malloc(MAXSIZE * sizeof(long long));
     data = (long long*)malloc(MAXSIZE * sizeof(long long));
     stack = (long long*)malloc(MAXSIZE * sizeof(long long));
+    codes = (long long*)malloc(MAXSIZE * sizeof(long long));
     if (symbolTable == NULL || nodeStack == NULL || code == NULL || data == NULL || stack == NULL) {
         // 初始化失败
         printErrorInformation("Fail to Init", NULL);
@@ -65,9 +66,11 @@ void init(void) {
     memset(code, 0, MAXSIZE * sizeof(long long));
     memset(data, 0, MAXSIZE * sizeof(long long));
     memset(stack, 0, MAXSIZE * sizeof(long long));
+    memset(codes, 0, MAXSIZE * sizeof(long long));
     // 初始化符号表指针
     symbolPtr = symbolTable;
     codeDump = code;
+    codesDump = codes;
 }
 
 /* 打印词素 token
@@ -296,10 +299,12 @@ void printTree(struct treeNode* node, int n){
                 printf("\n");
             } else if (node->expressionType == Constant) {
                 // 打印 Int 或 Char 常量
-                if (node->identifierType == CHAR){
-                    printf("Char:'%c'\n",(char)node->value);
+                if (node->identifierType == Char){
+                    printf("Char:   '%c'\n",(char)node->value);
+                } else if (node->identifierType == Int){
+                    printf("Num:     %lld\n",node->value);
                 } else {
-                    printf("Num:%lld\n",node->value);
+                    printf("String:  %s",(char*)node->value);
                 }
             } else if (node->expressionType == Identifier) {
                 // 打印变量
@@ -500,7 +505,7 @@ void printAssemble(){
     long long* dump = codeDump;
     while (codeDump < code) {
         ++codeDump;
-        fprintf(stdout, "(%lld)  %.4s", (long long)codeDump, instructions[*codeDump]);
+        fprintf(stdout, "(%lld)  %.5s", (long long)codeDump, instructions[*codeDump]);
         if (*codeDump < RET) {
             ++codeDump;
             fprintf(stdout, "\t%lld\n", *codeDump);
@@ -508,4 +513,25 @@ void printAssemble(){
             fprintf(stdout, "\n");
         }
     }
+    codeDump = dump;
+}
+
+void printsAssemble(){
+    char* instructions [39] = {
+            "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG", "RET", "LI", "LC", "SI", "SC", "PUSH",
+            "OR", "XOR", "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL", "SHR", "ADD", "SUB", "MUL", "DIV", "MOD",
+            "OPEN", "READ", "CLOS", "PRINTF", "MALC", "FREE", "MSET", "MCMP", "EXIT"
+    };
+    long long* dump = codesDump;
+    while (codesDump < codes) {
+        ++codesDump;
+        fprintf(stdout, "(%lld)  %.8s", (long long)codesDump, instructions[*codesDump]);
+        if (*codesDump < RET) {
+            ++codesDump;
+            fprintf(stdout, "\t%lld\n", *codesDump);
+        } else {
+            fprintf(stdout, "\n");
+        }
+    }
+    codesDump = dump;
 }

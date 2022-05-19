@@ -62,6 +62,7 @@ struct treeNode{
     struct treeNode* sibling;
     int statementType;                      // 节点类型
     int identifierType;                      // 标识符类型
+    int classType;
     long long size;                         // 数组大小
     bool isArray;                           // 是否是数组
     int expressionType;                     // 表达式词素类别
@@ -87,4 +88,6 @@ extern int top;
 extern long long* code, *codeDump, *mainPtr, * stack, * data;
 extern long long* pc, * sp, * bp, ibp;
 extern long long ax, cycle;
+extern long long* codes, * codesDump;
+
 #endif //_GLOBALS_H

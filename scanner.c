@@ -11,6 +11,7 @@
 void getToken(void){
     int index = 0;
     char* chPtr = NULL;
+    long long* base = NULL;
     tokenString = malloc(BUFFERSIZE * sizeof(char));
     if (tokenString == NULL) {
         printErrorInformation("Fail to create tokenString", NULL);
@@ -105,6 +106,7 @@ void getToken(void){
             token = Num;
             break;
         } else if (token == '"' || token == '\'') {
+            base = data;
             // 处理字符串和字符
             while ((*source != 0) && (*source != token)) {
                 tokenValue = (long long)*source;
@@ -120,12 +122,19 @@ void getToken(void){
                 // 处理字符串
                 if (token == '"') {
                     tokenString[index++] = (char)tokenValue;
+                    if ((char)tokenValue == '%') {
+                        *data++ = (tokenValue << 56) | 0x007F7F7F7F7F7F7F;
+                    } else {
+                        *data++ = tokenValue | 0x7F7F7F7F7F7F7F00;
+                    }
                 }
             }
             source++;
             if (token == '"') {
                 // 记录到符号表
-                token = String;
+                token = Char + Ptr;
+                data++;
+                tokenValue = (long long)base;
             } else {
                 // 记录到符号表
                 token = Char;

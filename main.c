@@ -21,6 +21,7 @@ struct symbol* symbolTable, * symbolPtr; // 符号表与符号表指针
 long long* code, *codeDump, *mainPtr, * stack, * data;
 long long* pc, * sp, * bp, ibp;
 long long ax, cycle;
+long long* codes, * codesDump;
 
 int main(int argc, char** argv) {
     // 载入源代码
@@ -41,7 +42,11 @@ int main(int argc, char** argv) {
         // 打印 AST
         printTree(root, 0);
     }
+//    printAssemble();
+//    printf("\n\n");
+    generateCode(root);
     printAssemble();
+//    printsAssemble();
     runCode(--argc,++argv);
     return 0;
 }
