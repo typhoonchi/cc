@@ -7,14 +7,13 @@
 
 void loadSrc(const char* fileName);
 void init(void);
-struct treeNode* createNode(int statementType, int expressionType, int operatorType);
 void printToken(int lineNo);
 void printSource(int lineNo);
-void printTree(struct treeNode* node, int n);
+void printTree(sTreeNode* node, int n);
 void printType(int type);
 void printOperator(int op);
 void printTab(int n);
 void printErrorInformation(char* error, const char* message);
 void printAssemble();
-void printsAssemble();
+
 #endif //_UTILITY_H

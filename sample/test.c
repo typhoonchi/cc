@@ -31,18 +31,16 @@
 //    c = max(arr[0][0],b[0]);
 //    return 0;
 //}
-
+int ret,x[2],y[4],z;
+int arr[10][10];
 int add(int a, int b) {
     int res;
+    ret = 1;
     return a + b;
 }
 
 int main(){
-    int x, y, z, h;
-    char c;
-    c = 'd';
-    x = 1;
-    y = add(4,add(x, 4));
-    printf("y = %d\n",y);
+    arr[1][1] = 5;
+    printf("%d\n",arr[1][1]);
     return 0;
 }

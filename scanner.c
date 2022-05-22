@@ -5,26 +5,26 @@
 #include "scanner.h"
 #include "utility.h"
 
-/* 词法分析
- *
- * */
-void getToken(void){
-    int index = 0;
-    char* chPtr = NULL;
-    long long* base = NULL;
-    tokenString = malloc(BUFFERSIZE * sizeof(char));
-    if (tokenString == NULL) {
-        printErrorInformation("Fail to create tokenString", NULL);
-        exit(1);
-    }
-    memset(tokenString, 0, BUFFERSIZE * sizeof(char));
+static void createTokenString();
 
-    // 取字符
+/**
+ * @brief 词法分析
+ *
+ * 扫描源代码缓冲区, 输出词素
+ *
+ * @param void
+ * @return void
+ * */
+void getToken(void) {
+    int index = 0;                  // 词素名称索引
+    char* chPtr = NULL;             // 字符指针
+    long long* base = NULL;         // 数据段指针, 存储字符串常量时用于定位数据段初始位置
+
+    // 从源代码缓冲区中取字符
     while ((token = (unsigned char)*source) != '\0') {
-        // 取字符
-        // 缓冲区指针移动, 向前看一个
+        // 源代码缓冲区指针移动, 向前看一个
         source++;
-        // DFA
+        // 根据 DFA 处理词素
         if (token == '\n') {
             // 跳过换行符
             line++;
@@ -37,9 +37,11 @@ void getToken(void){
                 source++;
             }
         } else if (token == ' ' || token == '\t') {
-            // do nothing
+            // 跳过
         } else if (isalpha((int)token) || token == '_') {
             // 处理标识符 ID
+            // 分配词素名称存储区
+            createTokenString();
             // 定位到标识符开始位置
             chPtr = source - 1;
             // 记录到 tokenString 中, 供后续使用
@@ -48,6 +50,7 @@ void getToken(void){
                 tokenString[index++] = *source;
                 // 计算 hash 值, 加速符号表查找
                 token = token * 147 + (*source);
+                // 源代码指针后移
                 source++;
             }
             // 计算 hash 值
@@ -62,6 +65,7 @@ void getToken(void){
                 }
                 symbolPtr++;
             }
+            // 判断符号表汇总是否已存在该标识符
             if (symbolPtr->token == 0) {
                 // 该标识符不存在, 向符号表中插入该标识符的名称, hash 值, token 类型
                 symbolPtr->name = tokenString;
@@ -72,6 +76,7 @@ void getToken(void){
         } else if (isnumber((int)token)) {
             // 处理数字
             tokenValue = token - '0';
+            // 判断数字是 Dec, Oct 还是 Hex
             if (token != '0') {
                 // 处理十进制非零整数
                 while (isnumber(*source)) {
@@ -91,9 +96,9 @@ void getToken(void){
                           * a - f 的 ASCII 码是 0x61 - 0x66*/
                         tokenValue = tokenValue * 16 + (token & 0xF) + (token >= 'A' ? 9 : 0);
                     }
-                } else if (*source >= '0' && *source <= '7') {
+                } else if ((*source >= '0') && (*source <= '7')) {
                     // 处理八进制数字
-                    while (*source >= '0' && *source <= '7') {
+                    while ((*source >= '0') && (*source <= '7')) {
                         tokenValue = tokenValue * 8 + (*source - '0');
                         source++;
                     }
@@ -102,49 +107,77 @@ void getToken(void){
                     tokenValue = token - '0';
                 }
             }
-            // 插入符号表
+            // 记录词素信息
             token = Num;
             break;
-        } else if (token == '"' || token == '\'') {
-            base = data;
-            // 处理字符串和字符
-            while ((*source != 0) && (*source != token)) {
+        } else if (token == '\'') {
+            // 处理字符
+            tokenValue = (long long)*source;
+            source++;
+            // 判断是否为转义字符
+            if (tokenValue == '\\') {
+                // 处理转义字符
                 tokenValue = (long long)*source;
                 source++;
+                if (tokenValue == 'n') {
+                    tokenValue = '\n';
+                } else if (tokenValue == 't') {
+                    tokenValue = '\t';
+                }
+            }
+            // 判断是否是正常的字符
+            if (*source != '\'') {
+                // 异常字符, 打印错误信息
+                exit(1);
+            }
+            source++;
+            // 记录词素信息
+            token = Char;
+            break;
+        } else if (token == '"') {
+            // 处理字符串
+            // 分配词素名称存储区
+            createTokenString();
+            // 定位数据段初始位置
+            base = data;
+            // 处理字符串
+            while ((*source != 0) && (*source != '"')) {
+                tokenValue = (long long)*source;
+                source++;
+                // 判断是否为转义字符
                 if (tokenValue == '\\') {
-                    // 处理换行符
+                    // 处理转义字符
                     tokenValue = (long long)*source;
                     source++;
                     if (tokenValue == 'n') {
                         tokenValue = '\n';
+                    } else if (tokenValue == 't') {
+                        tokenValue = '\t';
                     }
                 }
-                // 处理字符串
-                if (token == '"') {
-                    tokenString[index++] = (char)tokenValue;
-                    if ((char)tokenValue == '%') {
-                        *data++ = (tokenValue << 56) | 0x007F7F7F7F7F7F7F;
-                    } else {
-                        *data++ = tokenValue | 0x7F7F7F7F7F7F7F00;
-                    }
+                // 记录字符串
+                tokenString[index++] = (char)tokenValue;
+                // 特殊处理占位符, 不推荐
+                if ((char)tokenValue == '%') {
+                    *data = (tokenValue << 56) | 0x007F7F7F7F7F7F7F;
+                    data++;
+                } else {
+                    *data = tokenValue | 0x7F7F7F7F7F7F7F00;
+                    data++;
                 }
             }
             source++;
-            if (token == '"') {
-                // 记录到符号表
-                token = Char + Ptr;
-                data++;
-                tokenValue = (long long)base;
-            } else {
-                // 记录到符号表
-                token = Char;
-            }
+            // 记录到符号表
+            token = Char + Ptr;
+            // 存储 '\0'
+            data++;
+            // 记录字符串存储首地址信息
+            tokenValue = (long long)base;
             break;
         } else if (token == '/') {
             // 处理除法, 单行注释和多行注释
             if (*source == '/') {
                 // 处理单行注释
-                source++;
                 while ((*source != '\0') && (*source != '\n')) {
                     source++;
                 }
@@ -252,7 +285,7 @@ void getToken(void){
                 // 处理小于等于
                 source++;
                 token = Le;
-            } else if (*source == '<'){
+            } else if (*source == '<') {
                 // 处理左移
                 source++;
                 token = Shl;
@@ -267,7 +300,7 @@ void getToken(void){
                 // 处理大于等于
                 source++;
                 token = Ge;
-            } else if (*source == '>'){
+            } else if (*source == '>') {
                 // 处理右移
                 source++;
                 token = Shr;
@@ -288,21 +321,26 @@ void getToken(void){
             exit(1);
         }
     }
+    // 打印词素信息
     if (scanTrace) {
         printToken(line);
     }
 }
 
-/* 初始化关键字信息
+/**
+ * @brief 初始化关键字信息
  *
+ * 初始化关键字与系统调用函数 printf
+ *
+ * @param void
+ * @return void
  * */
-void initKeywords(void){
-    // 记录标志位信息
-    int record;
-    // 关键字信息
+void initKeywords(void) {
+    int record;         // 记录标志位信息
     char* keywords[8] = {
             "int", "char", "if", "else", "return", "while", "void", "printf"
-    };
+    };                  // 关键字信息
+
     record = scanTrace;
     scanTrace = 0;
     // 扫描关键字
@@ -315,8 +353,29 @@ void initKeywords(void){
     getToken();
     symbolPtr->class = Sys;
     symbolPtr->type = Int;
-    symbolPtr->value = PRINTF;
+    symbolPtr->address = PRINTF;
     // 恢复标志位与相关信息
     source = sourceDump;
     scanTrace = record;
+}
+
+/**
+ * @brief 分配词素名称存储区
+ *
+ * 为 tokenString 分配内存空间, 并初始化
+ *
+ * @param   void
+ * @return  void
+ * */
+static void createTokenString() {
+    // 分配词素名称存储区
+    tokenString = malloc(BUFFER_SIZE * sizeof(char));
+    // 判断存储区是否创建成功
+    if (tokenString == NULL) {
+        // 创建失败, 打印错误信息
+        printErrorInformation("Fail to create tokenString", NULL);
+        exit(1);
+    }
+    // 初始化存储区
+    memset(tokenString, 0, BUFFER_SIZE * sizeof(char));
 }

@@ -3,45 +3,87 @@
 //
 
 #include "code.h"
-/*
- *
- * */
+
 static int argNum;
 static int type;
 
+static void generateFunctionCode(struct treeNode* node);
+static void generateExpressionStatementCode(struct treeNode* node, int offset);
+
+
+/**
+ * @brief 代码生成
+ *
+ * 根据 AST, 生成虚拟机代码
+ *
+ * @param   node    AST 节点
+ * @return  void
+ * */
 void generateCode(struct treeNode* node){
-    long long* points[2];
-    struct treeNode* parameterNode;
-    int localNum;
+    long long* points[2];               // 地址指针数组, 用于分支和循环语句的地址回填
+    struct treeNode* parameterNode;     // 参数节点
+    int localNum;                       // 统计局部变量数量
+
     localNum = 0;
+    // 遍历非空节点
     while (node != NULL) {
+        // 生成代码
         if (node->statementType == IfStatement) {
+            // 生成 If 语句代码
+            // 生成条件判断表达式代码
             generateCode(node->children[0]);
-            *++code = JZ;
-            points[0] = ++code;
+            code++;
+            *code = JZ;
+            code++;
+            // 记录条件判断不成立后跳转的地址
+            points[0] = code;
+            // 生成成功分支代码
             generateCode(node->children[1]);
+            // 判断是否有 Else 语句
             if (node->children[2] != NULL) {
-                *points[0] = (long long)(code + 3);
-                *++code = JMP;
-                points[0] = ++code;
+                code++;
+                *code = JMP;
+                // 回填条件判断不成立后的目标地址
+                *points[0] = (long long)(code + 2);
+                code++;
+                // 记录条件判断成立后跳转的地址
+                points[0] = code;
+                // 生成失败分支代码
                 generateCode(node->children[2]);
             }
+            // 回填跳转目标地址
             *points[0] = (long long)(code + 1);
         } else if (node->statementType == WhileStatement) {
+            // 生成 While 语句代码
+            // 记录循环跳转地址
             points[0] = (code + 1);
+            // 生成循环条件表达式代码
             generateCode(node->children[0]);
-            *++code = JZ;
-            points[1] = ++code;
+            code++;
+            *code = JZ;
+            code++;
+            // 记录循环结束地址
+            points[1] = code;
+            // 生成循环体代码
             generateCode(node->children[1]);
-            *++code = JMP;
-            *++code = (long long)points[0];
+            code++;
+            *code = JMP;
+            code++;
+            // 回填循环跳转地址
+            *code = (long long)points[0];
+            // 回填循环结束地址
             *points[1] = (long long)(code + 1);
         } else if (node->statementType == ExpressStatement) {
+            // 生成表达式代码
             generateExpressionStatementCode(node, argNum + 1);
         } else if (node->statementType == ReturnStatement) {
+            // 生成 Return 语句代码
+            // 生成返回值代码
             generateExpressionStatementCode(node->children[0], argNum + 1);
-            *++code = RET;
+            code++;
+            *code = RET;
         } else if (node->statementType == Function) {
+            // 生成函数定义代码
             generateFunctionCode(node);
         } else if (node->statementType == ParameterStatement) {
             // skip
@@ -52,11 +94,21 @@ void generateCode(struct treeNode* node){
     }
 }
 
-
+/**
+ * @brief 生成函数定义代码
+ *
+ * 生成函数定义代码
+ *
+ * @param   node    AST 节点
+ * @return  void
+ * */
 void generateFunctionCode(struct treeNode* node) {
-    int localNum = 0;
-    struct treeNode* tempNode;
+    int localNum = 0;               // 统计局部变量数量
+    struct treeNode* tempNode;      // 临时节点
+
+    // 回填函数在代码段中地址
     *(long long*)(node->value) = (long long)(code + 1);
+    // 统计参数个数
     tempNode = node->children[0];
     if (tempNode->identifierType != VOID) {
         argNum = 0;
@@ -65,210 +117,372 @@ void generateFunctionCode(struct treeNode* node) {
             tempNode = tempNode->sibling;
         }
     }
+    // 统计局部变量个数
     tempNode = node->children[1];
     while (tempNode->statementType == DeclareStatement) {
         localNum++;
         tempNode = tempNode->sibling;
     }
-    *++code = NVAR;
-    *++code = localNum;
+    // 为局部变量分配栈空间
+    code++;
+    *code = NVAR;
+    code++;
+    *code = localNum;
+    // 生成函数体代码
     generateCode(tempNode);
+    // 处理 void 类型函数定义, 补充 RET
     if (*code != RET) {
-        *++code = RET;
+        code++;
+        *code = RET;
     }
 }
-/*
+
+/**
+ * @brief 生成表达式代码
  *
+ * 生成表达式代码
+ *
+ * @param   node    AST 节点
+ * @param   offset
+ * @return  void
  * */
 void generateExpressionStatementCode(struct treeNode* node, int offset) {
-    long long* point, num;
-    int tempType;
-    struct treeNode* tempNode;
+    long long* point, num;      //
+    int tempType;               //
+    struct treeNode* tempNode;  // 临时节点
+
+    // 判断节点是否为空
     if (node == NULL) {
+        // 空节点, 直接返回
         return;
     }
+    // 处理表达式不同部分
     if (node->expressionType == Constant) {
+        // 处理常量
         if (node->identifierType == Int) {
-            *++code = IMM;
-            *++code = node->value;
+            // 处理 Int 常量
+            code++;
+            *code = IMM;
+            code++;
+            *code = node->value;
             type = Int;
         } else if (node->identifierType == Char) {
-            *++code = IMM;
-            *++code = node->value | 0x7F7F7F7F7F7F7F00;
+            // 处理 Char 常量
+            code++;
+            *code = IMM;
+            code++;
+            *code = node->value | 0x7F7F7F7F7F7F7F00;
             type = Int;
         } else if (node->identifierType == Char + Ptr) {
-            *++code = IMM;
-            *++code = node->value;
+            // 处理字符串常量
+            code++;
+            *code = IMM;
+            code++;
+            *code = node->value;
             type = Char + Ptr;
         }
-    } else if (node->expressionType == Identifier) {
+    } else if (node->expressionType == Variable) {
+        // 处理变量
+        // 判断是全局变量还是局部变量
         if (node->classType == Glo) {
-            *++code = IMM;
-            *++code = node->value;
+            // 处理全局变量
+            code++;
+            *code = IMM;
+            code++;
+            *code = node->value;
         } else {
-            *++code = LEA;
-            *++code = offset - node->value;
+            // 处理局部变量
+            code++;
+            *code = LEA;
+            code++;
+            *code = offset - node->value;
         }
         type = node->identifierType;
-        *++code = LI;
+        // 载入变量
+        code++;
+        *code = LI;
     } else if (node->expressionType == Operator) {
+        // 处理运算符
         if (node->operatorType == '!') {
-            *++code = PUSH;
-            *++code = IMM;
-            *++code = 0;
-            *++code = EQ;
+            // 处理单目运算符 !
+            code++;
+            *code = PUSH;
+            code++;
+            *code = IMM;
+            code++;
+            *code = 0;
+            code++;
+            *code = EQ;
             type = Int;
         } else if (node->operatorType == Assign) {
+            // 处理赋值运算符 =
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
+            // 把装入变压栈
             if (*code == LI) {
                 *code = PUSH;
             }
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = SI;
+            code++;
+            *code = SI;
         } else if (node->operatorType == Lor) {
+            // 处理逻辑或 ||
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = JNZ;
-            point = ++code;
+            // 短路处理, 左侧表达式为真, 直接跳转到后方语句
+            code++;
+            *code = JNZ;
+            code++;
+            point = code;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
+            // 回填跳转地址
             *point = (long long)(code + 1);
             type = Int;
         } else if (node->operatorType == Land) {
+            // 处理逻辑与 &&
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = JZ;
-            point = ++code;
+            // 短路处理, 左侧表达式为假, 直接跳转到后方语句
+            code++;
+            *code = JZ;
+            code++;
+            point = code;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
+            // 回填跳转地址
             *point = (long long)(code + 1);
             type = Int;
         } else if (node->operatorType == Or) {
+            // 处理按位或 |
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = OR;
+            code++;
+            *code = OR;
             type = Int;
         } else if (node->operatorType == Xor) {
+            // 处理异或 ^
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = XOR;
+            code++;
+            *code = XOR;
             type = Int;
         } else if (node->operatorType == And) {
+            // 处理按位与 &
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = AND;
+            code++;
+            *code = AND;
             type = Int;
         } else if (node->operatorType == Eq) {
+            // 处理等于 ==
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = EQ;
+            code++;
+            *code = EQ;
             type = Int;
         } else if (node->operatorType == Ne) {
+            // 处理不等于 !+
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = NE;
+            code++;
+            *code = NE;
             type = Int;
         } else if (node->operatorType == Lt) {
+            // 处理小于 <
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = LT;
+            code++;
+            *code = LT;
             type = Int;
         } else if (node->operatorType == Gt) {
+            // 处理大于 >
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = GT;
+            code++;
+            *code = GT;
             type = Int;
         } else if (node->operatorType == Le) {
+            // 处理小于等于 <=
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = LE;
+            code++;
+            *code = LE;
             type = Int;
         } else if (node->operatorType == Ge) {
+            // 处理大于等于 >=
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = GE;
+            code++;
+            *code = GE;
             type = Int;
         } else if (node->operatorType == Shl) {
+            // 处理左移 <<
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = SHL;
+            code++;
+            *code = SHL;
             type = Int;
         } else if (node->operatorType == Shr) {
+            // 处理右移 >>
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = SHR;
+            code++;
+            *code = SHR;
             type = Int;
         } else if (node->operatorType == Add) {
+            // 处理加 +
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = ADD;
+            code++;
+            *code = ADD;
             type = Int;
         } else if (node->operatorType == Sub) {
+            // 处理逻减 -
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = SUB;
+            code++;
+            *code = SUB;
             type = Int;
         } else if (node->operatorType == Mul) {
+            // 处理乘 *
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = MUL;
+            code++;
+            *code = MUL;
             type = Int;
         } else if (node->operatorType == Div) {
+            // 处理除 /
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = DIV;
+            code++;
+            *code = DIV;
             type = Int;
         } else if (node->operatorType == Mod) {
+            // 处理取模 %
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
-            *++code = MOD;
+            code++;
+            *code = MOD;
             type = Int;
         } else if (node->operatorType == Bracket) {
+            // 处理下标 []
+            // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
             tempType = type;
+            // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
             type = tempType;
             if (type > Ptr) {
-                *++code = PUSH;
-                *++code = IMM;
-                *++code = 8;
-                *++code = MUL;
+                code++;
+                *code = PUSH;
+                code++;
+                *code = IMM;
+                code++;
+                *code = 8;
+                code++;
+                *code = MUL;
             }
-            *++code = ADD;
-            *++code = LI;
+            code++;
+            *code = ADD;
+            code++;
+            *code = LI;
             type = type - Ptr;
         }
     } else if (node->expressionType == Call) {
+        // 处理函数调用
         tempNode = node->children[0];
         num = 0;
+        // 处理参数列表
         while (tempNode != NULL) {
+            // 处理参数表达式
             generateExpressionStatementCode(tempNode, offset);
-            *++code = PUSH;
+            code++;
+            *code = PUSH;
             num++;
             tempNode = tempNode->sibling;
         }
         if (node->classType == Sys) {
-            *++code = *((long long*)(node->value));
+            code++;
+            *code = *((long long*)(node->value));
         } else {
-            *++code = CALL;
-            *++code = *((long long*)(node->value));
+            code++;
+            *code = CALL;
+            code++;
+            *code = *((long long*)(node->value));
         }
         if (num > 0) {
-            *++code = DARG;
-            *++code = num;
+            code++;
+            *code = DARG;
+            code++;
+            *code = num;
         }
         type = node->identifierType;
     } else {
@@ -276,10 +490,19 @@ void generateExpressionStatementCode(struct treeNode* node, int offset) {
     }
 }
 
+/**
+ * @brief 运行虚拟机代码
+ *
+ * 运行虚拟机代码
+ *
+ * @param   argc
+ * @param   argv
+ * @return  void
+ * */
 void runCode(int argc, char** argv){
     long long op;
     long long* temp;
-    bp = sp = (long long*)((long long)stack + MAXSIZE);
+    bp = sp = (long long*)((long long)stack + MAX_SIZE);
     *--sp = EXIT;
     *--sp = PUSH;
     temp = sp;

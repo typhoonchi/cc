@@ -5,79 +5,101 @@
 #include "globals.h"
 #include "utility.h"
 
+static char* sourcePtr = NULL;             // 源代码打印指针
 
-/* 载入源代码
+/**
+ * @brief   载入源代码
  *
- * @param fileName 源代码文件名
+ * 通过文件指针打开指定源代码文件, 并将文件中内容读入到源代码缓冲区.
+ *
+ * @param   fileName    源代码文件名
+ * @return  void
  * */
 void loadSrc(const char* fileName){
-    // 存储源代码长度
-    long size = 0;
-    // 打开源代码文件
+    FILE* filePtr = NULL;           // 文件指针.
+    long size = 0;                 // 存储源代码长度.
+
+    // 打开源代码文件.
     filePtr = fopen(fileName,"r");
+    // 判断文件是否成功打开.
     if (filePtr == NULL) {
+        // 打开文件失败, 打印错误信息.
         printErrorInformation("Could Not Open Source Code:", fileName);
         exit(1);
     }
-    // 分配缓冲区读取源代码
-    source = (char*)malloc(MAXSIZE);
+    // 分配缓冲区读取源代码.
+    source = (char*)malloc(MAX_SIZE);
+    // 判断源代码区是否分配成功.
     if (source == NULL) {
+        // 分配源代码区失败, 打印错误信息.
         printErrorInformation("Could Not Malloc for Source Code", NULL);
         exit(1);
     }
-    // 移动指针到文件末尾 , 获取文件长度
+    // 移动指针到文件末尾 , 获取文件长度.
     fseek(filePtr,0,SEEK_END);
     size = ftell(filePtr);
-    // 恢复指针到文件首
+    // 恢复指针到文件首.
     fseek(filePtr,0,SEEK_SET);
-    // 读取源代码到文件缓冲区
-    if (fread(source,sizeof(char),size,filePtr) == 0) {
+    // 读取源代码到文件缓冲区.
+    size = (long)fread(source,sizeof(char),size,filePtr);
+    // 判断读取源代码是否成功.
+    if (size == 0) {
+        // 读取源代码失败, 打印错误信息.
         printErrorInformation("Could Not Read Source Code:", fileName);
         exit(1);
     }
+    // 初始化源代码指针, 源代码备份指针.
     sourcePtr = sourceDump = source;
-    // 关闭源代码文件
+    // 关闭源代码文件.
     fclose(filePtr);
 }
 
-/* 初始化编译器
+/**
+ * @brief 初始化编译器
  *
+ * 为编译器中用到的符号表, 节点栈, 代码段, 数据段, 堆栈段的分配存储区; 并初始化存储区空间与相关指针
+ *
+ * @param   void
+ * @return  void
  * */
-void init(void) {
+void init() {
     // 分配符号表存储区
-    symbolTable = (struct symbol*)malloc(MAXSIZE * sizeof(struct symbol));
-    // 分配表达式栈存储区
-    nodeStack = (struct treeNode**) malloc(STACKSIZE * sizeof(struct treeNode*));
-    code = (long long*)malloc(MAXSIZE * sizeof(long long));
-    data = (long long*)malloc(MAXSIZE * sizeof(long long));
-    stack = (long long*)malloc(MAXSIZE * sizeof(long long));
-    codes = (long long*)malloc(MAXSIZE * sizeof(long long));
-    if (symbolTable == NULL || nodeStack == NULL || code == NULL || data == NULL || stack == NULL) {
-        // 初始化失败
+    symbolTable = (sSymbol*)malloc(MAX_SIZE * sizeof(sSymbol));
+    // 分配代码段存储区
+    code = (long long*)malloc(MAX_SIZE * sizeof(long long));
+    // 分配数据段存储区
+    data = (long long*)malloc(MAX_SIZE * sizeof(long long));
+    // 分配堆栈段存储区
+    stack = (long long*)malloc(MAX_SIZE * sizeof(long long));
+    // 判断初始化是否成功
+    if (symbolTable == NULL || code == NULL || data == NULL || stack == NULL) {
+        // 初始化失败, 打印错误信息
         printErrorInformation("Fail to Init", NULL);
         exit(1);
     }
-    // 初始化栈顶
-    top = 0;
+    // 初始化存储区
+    memset(symbolTable, 0, MAX_SIZE * sizeof(sSymbol));
+    memset(code, 0, MAX_SIZE * sizeof(long long));
+    memset(data, 0, MAX_SIZE * sizeof(long long));
+    memset(stack, 0, MAX_SIZE * sizeof(long long));
+    // 初始化
     ibp = 0;
-    // 初始化符号表存储区
-    memset(symbolTable, 0, MAXSIZE * sizeof(struct symbol));
-    memset(nodeStack, 0, STACKSIZE * sizeof(struct treeNode*));
-    memset(code, 0, MAXSIZE * sizeof(long long));
-    memset(data, 0, MAXSIZE * sizeof(long long));
-    memset(stack, 0, MAXSIZE * sizeof(long long));
-    memset(codes, 0, MAXSIZE * sizeof(long long));
     // 初始化符号表指针
     symbolPtr = symbolTable;
+    // 初始化代码备份指针
     codeDump = code;
-    codesDump = codes;
 }
 
-/* 打印词素 token
+/**
+ * @brief   打印词素 token
  *
- * @param lineNo 行号
+ * 功能函数, 打印词法分析输出的词素
+ *
+ * @param   lineNo  行号
+ * @return  void
  * */
 void printToken(int lineNo) {
+    // 判断词素类别, 并打印相关信息
     switch (token) {
         case Id:
             printf("\t%-3d: Id             --->   %s\n",lineNo, tokenString);
@@ -181,11 +203,15 @@ void printToken(int lineNo) {
     }
 }
 
-/* 打印源代码
+/**
+ * @brief   打印源代码
  *
- * @param lineNo 行号
+ * 功能函数, 逐行打印源代码
+ *
+ * @param   lineNo  行号
+ * @return  void
  * */
-void printSource(int lineNo){
+void printSource(int lineNo) {
     printf("%d : ",lineNo);
     while ((*sourcePtr != '\n') && (*sourcePtr != '\0')){
         printf("%c",(char)*sourcePtr);
@@ -199,59 +225,27 @@ void printSource(int lineNo){
     }
 }
 
-/* 创建抽象语法树节点
+/**
+ * @brief 打印抽象语法树
  *
- * @param statementType  语句类型 If, While, Return,...
- * @param expressionType 表达式类型 Operator, Constant, Identifier, Call
- * @param operatorType   运算符类型 << >> ...
- * @return  抽象语法树节点指针, 指向语句节点
- * */
-struct treeNode* createNode(int statementType, int expressionType, int operatorType){
-    // 创建空节点
-    struct treeNode* node = (struct treeNode*) malloc(sizeof(struct treeNode));
-    if (node == NULL) {
-        // 创建失败
-        printErrorInformation("Fail to Create AST Node", NULL);
-        exit(1);
-    }
-    // 初始化语句类型
-    node->statementType = statementType;
-    // 初始化孩子节点
-    for (int i = 0; i < MAXCHILDREN; i++) {
-        node->children[i] = NULL;
-    }
-    // 初始化兄弟结点
-    node->sibling = NULL;
-    //初始化数组相关内容
-    node->size = 1;
-    node->isArray = false;
-    // 初始化表达式类型 , 仅当语句类型为表达式时有效
-    node->expressionType = expressionType;
-    // 初始化运算符类型 , 仅当语句类型为表达式时有效
-    node->operatorType = operatorType;
-    // 初始化常量值与变量名
-    node->value = 0;
-    node->name = NULL;
-    return node;
-}
-
-/* 打印抽象语法树
+ * 递归调用自身, 遍历 AST 树, 打印节点内容
  *
- * @param node 抽象语法树节点
- * @param n 递归深度
+ * @param   node  抽象语法树节点
+ * @param   n     递归深度
+ * @return  void
  * */
-void printTree(struct treeNode* node, int n){
+void printTree(sTreeNode* node, int n) {
+    // 遍历非空节点
     while (node != NULL) {
-        // 遍历非空节点
+        // 根据节点语句类型, 采取不同操作
         if (node->statementType == Function) {
             // 处理函数节点
-
             // 处理函数名与函数返回值类型
             printTab(n);
-            printf("Function name:%s\ttype:",node->name);
+            printf("Function name: %s",node->name);
+            printf("\ttype: ");
             printType(node->identifierType);
             printf("\n");
-
             // 处理参数列表
             printTab(n + 1);
             printf("Parameters:\n");
@@ -261,7 +255,7 @@ void printTree(struct treeNode* node, int n){
             printf("Function Body:\n");
             printTree(node->children[1], n + 2);
         } else if (node->statementType == IfStatement) {
-            // 处理 If 语句
+            // 处理 If 语句节点
             printTab(n);
             printf("IF statement:\n");
             // 处理条件表达式
@@ -272,6 +266,7 @@ void printTree(struct treeNode* node, int n){
             printTab(n + 1);
             printf("Success condition:\n");
             printTree(node->children[1], n + 2);
+            // 判断是否有 else 语句
             if (node->children[2] != NULL) {
                 // 处理失败分支语句
                 printTab(n + 1);
@@ -279,7 +274,7 @@ void printTree(struct treeNode* node, int n){
                 printTree(node->children[2], n + 2);
             }
         } else if (node->statementType == WhileStatement) {
-            // 处理 While 语句
+            // 处理 While 语句节点
             printTab(n);
             printf("While statement:\n");
             // 处理条件表达式
@@ -291,22 +286,22 @@ void printTree(struct treeNode* node, int n){
             printf("While Body:\n");
             printTree(node->children[1], n + 2);
         } else if (node->statementType == ExpressStatement) {
-            // 处理表达式语句
+            // 处理表达式语句节点
             printTab(n);
             if (node->expressionType == Operator) {
                 // 打印运算符
                 printOperator(node->operatorType);
                 printf("\n");
             } else if (node->expressionType == Constant) {
-                // 打印 Int 或 Char 常量
-                if (node->identifierType == Char){
+                // 打印 Int, Char, String 常量
+                if (node->identifierType == Char) {
                     printf("Char:   '%c'\n",(char)node->value);
-                } else if (node->identifierType == Int){
+                } else if (node->identifierType == Int) {
                     printf("Num:     %lld\n",node->value);
                 } else {
                     printf("String:  %s",(char*)node->value);
                 }
-            } else if (node->expressionType == Identifier) {
+            } else if (node->expressionType == Variable) {
                 // 打印变量
                 printf("Id:%s\n",node->name);
             } else if (node->expressionType == Call) {
@@ -318,7 +313,7 @@ void printTree(struct treeNode* node, int n){
             // 打印右侧子运算符
             printTree(node->children[1], n + 1);
         } else if (node->statementType == ReturnStatement) {
-            // 处理返回语句
+            // 处理返回语句节点
             printTab(n);
             printf("Return statement:\n");
             // 处理返回值
@@ -326,8 +321,9 @@ void printTree(struct treeNode* node, int n){
             printf("Return value:\n");
             printTree(node->children[0], n + 2);
         } else if (node->statementType == ParameterStatement) {
-            // 处理参数列表
-            if (node->identifierType == VOID) {
+            // 处理参数节点
+            // 根据节点标识符类型打印不同信息
+            if (node->identifierType == Void) {
                 // 处理空参数列表
                 printTab(n);
                 printType(node->identifierType);
@@ -340,63 +336,80 @@ void printTree(struct treeNode* node, int n){
                 printf(")\n");
             }
         } else if (node->statementType == DeclareStatement) {
-            // 处理声明语句
+            // 处理声明语句节点
             printTab(n);
             printf("Declare statement:\n");
-            // 处理声明类型
+            // 打印声明变量的类型
             printTab(n + 1);
             printf("Type:");
             printType(node->identifierType);
-            // 处理声明变量
+            // 打印声明变量的名称
             if (node->identifierType == INT || node->identifierType == CHAR) {
-                printf("\t\t\t\t\t\t\tid name:%s\n",node->name);
+                printf("\t\t\tId name: %s\n",node->name);
             } else {
-                printf("\t\t\t\t\t\t\tid name:%s\t\t\tsize:%lld\n",node->name,node->size);
+                printf("\t\t\tId name: %s\t\t\tSize: %lld\n",node->name,node->size);
             }
         }
-        // 遍历兄弟结点
+        // 处理兄弟结点
         node = node->sibling;
     }
 }
 
-/* 打印制表符
+/**
+ * @brief 打印制表符
+ *
+ * 根据传入参数 n, 打印 n 个制表符与分割线
  *
  * @param n 制表符个数
+ * @return void
  * */
-void printTab(int n){
+void printTab(int n) {
     for (int i = 0; i < n; i++) {
         printf("\t|");
     }
 }
 
-/* 打印类型
+/**
+ * @brief 打印类型
  *
- * @param type 类型
+ * 打印类型: Int, Char, Void, pointer
+ *
+ * @param   type    类型
+ * @return  void
  * */
-void printType(int type){
+void printType(int type) {
+    // 判断类型, 打印相关信息
     if (type == Int) {
         printf("INT");
     } else if (type == Char) {
         printf("CHAR");
-    } else if (type == VOID) {
+    } else if (type == Void) {
         printf("VOID");
     } else if (type > Ptr) {
+        // 判断是 Int 指针 还是 Char 指针
         if (type % Ptr == 1) {
             printf("INT ");
         } else {
             printf("CHAR");
         }
+        // 打印指针
         for (int i = type / Ptr; i > 0; i--) {
             printf(" PTR");
         }
+    } else {
+        // 打印错误信息
     }
 }
 
-/* 打印运算符
+/**
+ * @brief   打印运算符
  *
- * @param op 运算符
+ * 打印运算符类型
+ *
+ * @param   op  运算符
+ * @return  void
  * */
-void printOperator(int op){
+void printOperator(int op) {
     switch (op) {
         case Assign:
             printf("assign(=)");
@@ -481,28 +494,40 @@ void printOperator(int op){
     }
 }
 
-/* 打印错误信息
+/**
+ * @brief 打印错误信息
  *
- * @param error 错误信息
- * @param message 具体内容
+ * 打印错误信息到控制台
+ *
+ * @param   error   错误信息
+ * @param   message 具体内容
+ * @return  void
  * */
-void printErrorInformation(char* error, const char* message){
-    if (message == NULL){
+void printErrorInformation(char* error, const char* message) {
+    if (message == NULL) {
         fprintf(stderr,"line %d: %s !\n",line, error);
     } else {
         fprintf(stderr,"line %d: %s: %s !\n",line, error, message);
     }
 }
-/* 打印汇编结果
+
+/**
+ * @brief 打印汇编结果
  *
+ * 打印汇编语言代码
+ *
+ * @param   void
+ * @return  void
  * */
-void printAssemble(){
-    char* instructions [39] = {
-        "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG", "RET", "LI", "LC", "SI", "SC", "PUSH",
-                "OR", "XOR", "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL", "SHR", "ADD", "SUB", "MUL", "DIV", "MOD",
-                "OPEN", "READ", "CLOS", "PRINTF", "MALC", "FREE", "MSET", "MCMP", "EXIT"
-    };
-    long long* dump = codeDump;
+void printAssemble() {
+    char* instructions [32] = {
+        "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG",
+        "RET", "LI", "LC", "SI", "SC", "PUSH", "OR", "XOR",
+        "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL",
+        "SHR", "ADD", "SUB", "MUL", "DIV", "MOD", "PRINTF", "EXIT"
+    };                              // 指令集
+    long long* dump = codeDump;     // 备份代码备份指针
+    // 遍历代码段指针, 打印相关信息
     while (codeDump < code) {
         ++codeDump;
         fprintf(stdout, "(%lld)  %.5s", (long long)codeDump, instructions[*codeDump]);
@@ -513,25 +538,6 @@ void printAssemble(){
             fprintf(stdout, "\n");
         }
     }
+    // 恢复代码段备份指针
     codeDump = dump;
-}
-
-void printsAssemble(){
-    char* instructions [39] = {
-            "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG", "RET", "LI", "LC", "SI", "SC", "PUSH",
-            "OR", "XOR", "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL", "SHR", "ADD", "SUB", "MUL", "DIV", "MOD",
-            "OPEN", "READ", "CLOS", "PRINTF", "MALC", "FREE", "MSET", "MCMP", "EXIT"
-    };
-    long long* dump = codesDump;
-    while (codesDump < codes) {
-        ++codesDump;
-        fprintf(stdout, "(%lld)  %.8s", (long long)codesDump, instructions[*codesDump]);
-        if (*codesDump < RET) {
-            ++codesDump;
-            fprintf(stdout, "\t%lld\n", *codesDump);
-        } else {
-            fprintf(stdout, "\n");
-        }
-    }
-    codesDump = dump;
 }

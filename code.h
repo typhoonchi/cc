@@ -9,8 +9,6 @@
 #include "utility.h"
 
 void generateCode(struct treeNode* node);
-void generateFunctionCode(struct treeNode* node);
-void generateExpressionStatementCode(struct treeNode* node, int offset);
 void runCode(int argc, char** argv);
 
 #endif //_CODE_H
