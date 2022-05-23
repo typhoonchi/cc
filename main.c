@@ -15,7 +15,7 @@ int parseTrace = 1;                 // 是否打印 AST
 sTreeNode* root = NULL;         // AST 根节点
 sSymbol* symbolTable, * symbolPtr; // 符号表与符号表指针
 long long* code, *codeDump, *mainPtr, * stack, * data;
-long long* pc, * sp, * bp, ibp;
+long long* pc, * sp, * bp;
 long long ax, cycle;
 
 int main(int argc, char** argv) {

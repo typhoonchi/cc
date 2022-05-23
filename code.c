@@ -4,11 +4,13 @@
 
 #include "code.h"
 
-static int argNum;
+static long long argNum;
+static long long localNum;
 static int type;
 
+
 static void generateFunctionCode(struct treeNode* node);
-static void generateExpressionStatementCode(struct treeNode* node, int offset);
+static void generateExpressionStatementCode(struct treeNode* node, long long offset);
 
 
 /**
@@ -22,9 +24,7 @@ static void generateExpressionStatementCode(struct treeNode* node, int offset);
 void generateCode(struct treeNode* node){
     long long* points[2];               // 地址指针数组, 用于分支和循环语句的地址回填
     struct treeNode* parameterNode;     // 参数节点
-    int localNum;                       // 统计局部变量数量
 
-    localNum = 0;
     // 遍历非空节点
     while (node != NULL) {
         // 生成代码
@@ -103,15 +103,17 @@ void generateCode(struct treeNode* node){
  * @return  void
  * */
 void generateFunctionCode(struct treeNode* node) {
-    int localNum = 0;               // 统计局部变量数量
-    struct treeNode* tempNode;      // 临时节点
+    struct treeNode* tempNode, *childNode;      // 临时节点
+    long long size = 1;
 
+    // 统计局部变量数量
+    localNum = 0;
     // 回填函数在代码段中地址
     *(long long*)(node->value) = (long long)(code + 1);
     // 统计参数个数
+    argNum = 0;
     tempNode = node->children[0];
-    if (tempNode->identifierType != VOID) {
-        argNum = 0;
+    if (tempNode->identifierType != Void) {
         while (tempNode != NULL) {
             argNum++;
             tempNode = tempNode->sibling;
@@ -120,7 +122,14 @@ void generateFunctionCode(struct treeNode* node) {
     // 统计局部变量个数
     tempNode = node->children[1];
     while (tempNode->statementType == DeclareStatement) {
+//        localNum = 1;
         localNum++;
+        childNode = tempNode->children[0];
+        while (childNode != NULL) {
+            localNum = localNum + size * childNode->value;
+            size = size * childNode->value;
+            childNode = childNode->children[0];
+        }
         tempNode = tempNode->sibling;
     }
     // 为局部变量分配栈空间
@@ -146,7 +155,7 @@ void generateFunctionCode(struct treeNode* node) {
  * @param   offset
  * @return  void
  * */
-void generateExpressionStatementCode(struct treeNode* node, int offset) {
+void generateExpressionStatementCode(struct treeNode* node, long long offset) {
     long long* point, num;      //
     int tempType;               //
     struct treeNode* tempNode;  // 临时节点
@@ -503,12 +512,17 @@ void runCode(int argc, char** argv){
     long long op;
     long long* temp;
     bp = sp = (long long*)((long long)stack + MAX_SIZE);
-    *--sp = EXIT;
-    *--sp = PUSH;
+    sp--;
+    *sp = EXIT;
+    sp--;
+    *sp = PUSH;
     temp = sp;
-    *--sp = argc;
-    *--sp = (long long)argv;
-    *--sp = (long long)temp;
+    sp--;
+    *sp = argc;
+    sp--;
+    *sp = (long long)argv;
+    sp--;
+    *sp = (long long)temp;
     pc = (long long*)(*mainPtr);
     if (pc == NULL) {
         printErrorInformation("Fail to Find main Function", NULL);
@@ -517,80 +531,108 @@ void runCode(int argc, char** argv){
     cycle = 0;
     while (true) {
         cycle++;
-        op = *pc++;
+        op = *pc;
+        pc++;
         if (op == IMM) {
-            ax = *pc++;
+            ax = *pc;
+            pc++;
         } else if (op == LEA) {
-            ax = (long long)(bp + *pc++);
+            ax = (long long)(bp + *pc);
+            pc++;
         } else if (op == LC) {
             ax = *(long long*)ax;
         } else if (op == LI) {
             ax = *(long long*)ax;
         } else if (op == SC) {
-            *(long long*)*sp++ = ax;
+            *(long long*)*sp = ax;
+            sp++;
         } else if (op == SI) {
-            *(long long*)*sp++ = ax;
+            *(long long*)*sp = ax;
+            sp++;
         } else if (op == PUSH) {
-            *--sp = ax;
+            sp--;
+            *sp = ax;
         } else if (op == JMP) {
             pc = (long long*)*pc;
         } else if (op == JZ) {
             if (ax == 0) {
                 pc = (long long*)*pc;
             } else {
-                pc = pc + 1;
+                pc++;
             }
         } else if (op == JNZ) {
             if (ax != 0) {
                 pc = (long long*)*pc;
             } else {
-                pc = pc + 1;
+                pc++;
             }
         } else if (op == OR) {
-            ax = *sp++ | ax;
+            ax = *sp | ax;
+            sp++;
         } else if (op == XOR) {
-            ax = *sp++ ^ ax;
+            ax = *sp ^ ax;
+            sp++;
         } else if (op == AND) {
-            ax = *sp++ & ax;
+            ax = *sp & ax;
+            sp++;
         } else if (op == EQ) {
-            ax = *sp++ == ax;
+            ax = *sp == ax;
+            sp++;
         } else if (op == NE) {
-            ax = *sp++ != ax;
+            ax = *sp != ax;
+            sp++;
         } else if (op == LT) {
-            ax = *sp++ < ax;
+            ax = *sp < ax;
+            sp++;
         } else if (op == LE) {
-            ax = *sp++ <= ax;
+            ax = *sp <= ax;
+            sp++;
         } else if (op == GT) {
-            ax = *sp++ > ax;
+            ax = *sp > ax;
+            sp++;
         } else if (op == GE) {
-            ax = *sp++ >= ax;
+            ax = *sp >= ax;
+            sp++;
         } else if (op == SHL) {
-            ax = *sp++ << ax;
+            ax = *sp << ax;
+            sp++;
         } else if (op == SHR) {
-            ax = *sp++ >> ax;
+            ax = *sp >> ax;
+            sp++;
         } else if (op == ADD) {
-            ax = *sp++ + ax;
+            ax = *sp + ax;
+            sp++;
         } else if (op == SUB) {
-            ax = *sp++ - ax;
+            ax = *sp - ax;
+            sp++;
         } else if (op == MUL) {
-            ax = *sp++ * ax;
+            ax = *sp * ax;
+            sp++;
         } else if (op == DIV) {
-            ax = *sp++ / ax;
+            ax = *sp / ax;
+            sp++;
         } else if (op == MOD) {
-            ax = *sp++ % ax;
+            ax = *sp % ax;
+            sp++;
         } else if (op == CALL) {
-            *--sp = (long long)(pc + 1);
+            sp--;
+            *sp = (long long)(pc + 1);
             pc = (long long*)*pc;
         } else if (op == NVAR) {
-            *--sp = (long long)bp;
+            sp--;
+            *sp = (long long)bp;
             bp = sp;
-            sp = sp - *pc++;
+            sp = sp - *pc;
+            pc++;
         } else if (op == DARG) {
-            sp = sp + *pc++;
+            sp = sp + *pc;
+            pc++;
         } else if (op == RET) {
             sp = bp;
-            bp = (long long*)*sp++;
-            pc = (long long*)*sp++;
+            bp = (long long*)*sp;
+            sp++;
+            pc = (long long*)*sp;
+            sp++;
         } else if (op == EXIT) {
             printf("exit(%lld)\n",*sp);
             return;

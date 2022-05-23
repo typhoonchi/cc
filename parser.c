@@ -8,6 +8,7 @@
 
 static sTreeNode** expressionStack;             // 表达式栈
 static int top;                                 // 栈顶
+static long long ibp;                           //
 static long long num;                           // 计数器
 
 static void initExpressionStack();
@@ -352,6 +353,8 @@ sTreeNode* parseFunction(int type, char* name){
     node->name = name;
     // 记录符号表中存放函数在代码段中地址的数据的地址, 代码生成时进行回填
     node->value = (long long)&(symbolPtr->address);
+    // 重置计数器
+    num = 0;
     match('(');
     // 解析参数列表
     if (token == ')') {
@@ -359,8 +362,6 @@ sTreeNode* parseFunction(int type, char* name){
         node->children[0] = createNode(ParameterStatement, 0, 0, 0);
         node->children[0]->identifierType = Void;
     } else {
-        // 重置计数器
-        num = 0;
         // 有参列表 解析参数列表
         node->children[0] = parseParameters();
     }
@@ -447,8 +448,6 @@ sTreeNode* parseFunctionBody(){
     int baseType;                   // 标识符类别
     char* identifierName;            // 标识符名称
 
-    //
-    num = ibp;
     // 持续解析局部变量声明语句
     while (token == INT || token == CHAR) {
         // 获取局部变量类型
@@ -519,18 +518,19 @@ sTreeNode* parseDeclaration(int type, char* name, int mode){
     // 记录变量地址
     node->value = symbolPtr->address;
     // 持续解析变量声明
-    if (mode) {
-
-    }
     while ((token != ',') && (token != ';')) {
         // 解析数组声明
         if (token == Bracket) {
             symbolPtr->type += Ptr;
             match(Bracket);
-            base = (data - 1);
-            for (int i = 1; i <= size; i++) {
-                *(base - size + i) = (long long)data;
-                data += tokenValue;
+            if (mode) {
+                num += tokenValue;
+            } else {
+                base = (data - 1);
+                for (int i = 1; i <= size; i++) {
+                    *(base - size + i) = (long long)data;
+                    data += tokenValue;
+                }
             }
             size *= tokenValue;
             if (node->children[0] != NULL) {
@@ -780,7 +780,6 @@ sTreeNode* parseExpressionStatement(int operator){
             node->value = (long long)&(symbolPtr->address);
             match(Id);
             match('(');
-            num = 0;
             // 持续解析参数列表
             while (token != ')') {
                 // 将节点加入函数调用根节点上
@@ -795,7 +794,6 @@ sTreeNode* parseExpressionStatement(int operator){
                     node->children[0] = parseExpressionStatement(Assign);
                     lastSibling = node->children[0];
                 }
-                num++;
                 if (token != ')') {
                     match(',');
                 }

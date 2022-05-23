@@ -31,16 +31,25 @@
 //    c = max(arr[0][0],b[0]);
 //    return 0;
 //}
-int ret,x[2],y[4],z;
-int arr[10][10];
+//int arr[10];
+
 int add(int a, int b) {
     int res;
-    ret = 1;
     return a + b;
 }
 
+int mul(int a, int b) {
+    int res;
+    res = a * b;
+    return res;
+}
+
 int main(){
-    arr[1][1] = 5;
-    printf("%d\n",arr[1][1]);
+    int ax, bx;
+    ax = 5;
+    bx = 2 * ax;
+//    arr[1] = 5 * ax;
+    printf("%d\n",bx);
+//    printf("%d\n",arr[1]);
     return 0;
 }

@@ -85,7 +85,7 @@ extern int scanTrace;
 extern int sourceTrace;
 extern sTreeNode* root;
 extern long long* code, *codeDump, *mainPtr, * stack, * data;
-extern long long* pc, * sp, * bp, ibp;
+extern long long* pc, * sp, * bp;
 extern long long ax, cycle;
 
 #endif //_GLOBALS_H

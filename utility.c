@@ -82,8 +82,6 @@ void init() {
     memset(code, 0, MAX_SIZE * sizeof(long long));
     memset(data, 0, MAX_SIZE * sizeof(long long));
     memset(stack, 0, MAX_SIZE * sizeof(long long));
-    // 初始化
-    ibp = 0;
     // 初始化符号表指针
     symbolPtr = symbolTable;
     // 初始化代码备份指针
