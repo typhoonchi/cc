@@ -8,7 +8,6 @@
 
 static sTreeNode** expressionStack;             // 表达式栈
 static int top;                                 // 栈顶
-static long long ibp;                           //
 static long long num;                           // 计数器
 
 static void initExpressionStack();
@@ -366,7 +365,6 @@ sTreeNode* parseFunction(int type, char* name){
         node->children[0] = parseParameters();
     }
     num++;
-    ibp = num;
     match(')');
     match('{');
     // 解析函数体
@@ -740,6 +738,7 @@ sTreeNode* parseReturnStatement(){
 sTreeNode* parseExpressionStatement(int operator){
     sTreeNode* node;            // 表达式语句节点
     sTreeNode* lastSibling;     // 临时节点
+    long long tempToken;        //
 
     // 处理运算分量
     if (token == Num) {
@@ -840,134 +839,30 @@ sTreeNode* parseExpressionStatement(int operator){
             // 处理赋值 =
             match(Assign);
             node = createNode(ExpressStatement, Operator, 0, Assign);
-            // 处理左值
             node->children[0] = pop();
-            // 处理右值子表达式
             node->children[1] = parseExpressionStatement(Assign);
             push(node);
-        } else if (token == Lor) {
-            // 处理逻辑或 ||
-            match(Lor);
-            node = createNode(ExpressStatement, Operator, 0, Lor);
+        } else if ((token >= Lor) && (token <= Shr)) {
+            tempToken = token;
+            // 处理逻辑或 || 到 右移 >>
+            match((int)token);
+            node = createNode(ExpressStatement, Operator, 0, tempToken);
             node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Land);
+            node->children[1] = parseExpressionStatement((int)(tempToken + 1));
             push(node);
-        } else if (token == Land) {
-            // 处理逻辑与 &&
-            match(Land);
-            node = createNode(ExpressStatement, Operator, 0, Land);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Or);
-            push(node);
-        } else if (token == Or) {
-            // 处理按位或 |
-            match(Or);
-            node = createNode(ExpressStatement, Operator, 0, Or);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Xor);
-            push(node);
-        } else if (token == Xor) {
-            // 处理异或 ^
-            match(Xor);
-            node = createNode(ExpressStatement, Operator, 0, Xor);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(And);
-            push(node);
-        } else if (token == And) {
-            // 处理按位与 &
-            match(And);
-            node = createNode(ExpressStatement, Operator, 0, And);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Eq);
-            push(node);
-        } else if (token == Eq) {
-            // 处理相等 ==
-            match(Eq);
-            node = createNode(ExpressStatement, Operator, 0, Eq);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Ne);
-            push(node);
-        } else if (token == Ne) {
-            // 处理不等 !=
-            match(Ne);
-            node = createNode(ExpressStatement, Operator, 0, Ne);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Lt);
-            push(node);
-        } else if (token == Lt) {
-            // 处理小于 <
-            match(Lt);
-            node = createNode(ExpressStatement, Operator, 0, Lt);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Gt);
-            push(node);
-        } else if (token == Gt) {
-            // 处理大于 >
-            match(Gt);
-            node = createNode(ExpressStatement, Operator, 0, Gt);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Le);
-            push(node);
-        } else if (token == Le) {
-            // 处理小于等于 <=
-            match(Le);
-            node = createNode(ExpressStatement, Operator, 0, Le);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Ge);
-            push(node);
-        } else if (token == Ge) {
-            // 处理大于等于 >=
-            match(Ge);
-            node = createNode(ExpressStatement, Operator, 0, Ge);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Shl);
-            push(node);
-        } else if (token == Shl) {
-            // 处理左移 <<
-            match(Shl);
-            node = createNode(ExpressStatement, Operator, 0, Shl);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Shr);
-            push(node);
-        } else if (token == Shr) {
-            // 处理右移 >>
-            match(Shr);
-            node = createNode(ExpressStatement, Operator, 0, Shr);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Add);
-            push(node);
-        } else if (token == Add) {
-            // 处理加 +
-            match(Add);
-            node = createNode(ExpressStatement, Operator, 0, Add);
+        } else if ((token >= Add) && (token <= Sub)) {
+            // 处理加 + 到 减 -
+            tempToken = token;
+            match((int)token);
+            node = createNode(ExpressStatement, Operator, 0, tempToken);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Mul);
             push(node);
-        } else if (token == Sub) {
-            // 处理减 -
-            match(Sub);
-            node = createNode(ExpressStatement, Operator, 0, Sub);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Mul);
-            push(node);
-        } else if (token == Mul) {
-            // 处理乘 *
-            match(Mul);
-            node = createNode(ExpressStatement, Operator, 0, Mul);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Bracket);
-            push(node);
-        } else if (token == Div) {
-            // 处理除 /
-            match(Div);
-            node = createNode(ExpressStatement, Operator, 0, Div);
-            node->children[0] = pop();
-            node->children[1] = parseExpressionStatement(Bracket);
-            push(node);
-        } else if (token == Mod) {
-            // 处理取模 %
-            match(Mod);
-            node = createNode(ExpressStatement, Operator, 0, Mod);
+        } else if ((token >= Mul) && (token <= Mod)) {
+            // 处理乘 * 到 取模 %
+            tempToken = token;
+            match((int)token);
+            node = createNode(ExpressStatement, Operator, 0, tempToken);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Bracket);
             push(node);
