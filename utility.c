@@ -518,8 +518,8 @@ void printErrorInformation(char* error, const char* message) {
  * @return  void
  * */
 void printAssemble() {
-    char* instructions [34] = {
-        "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG", "MLAS", "DLAS",
+    char* instructions [32] = {
+        "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG",
         "RET", "LI", "LC", "SI", "SC", "PUSH", "OR", "XOR",
         "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL",
         "SHR", "ADD", "SUB", "MUL", "DIV", "MOD", "PRINTF", "EXIT"

@@ -12,6 +12,8 @@ static int type;
 static void generateFunctionCode(struct treeNode* node);
 static void generateIfStatementCode(struct treeNode* node);
 static void generateWhileStatementCode(struct treeNode* node);
+static void generateForStatementCode(struct treeNode* node);
+static void generateDoWhileStatementCode(struct treeNode* node);
 static void generateExpressionStatementCode(struct treeNode* node, long long offset);
 
 
@@ -24,8 +26,6 @@ static void generateExpressionStatementCode(struct treeNode* node, long long off
  * @return  void
  * */
 void generateCode(struct treeNode* node){
-    long long* points[2];               // 地址指针数组, 用于分支和循环语句的地址回填
-    struct treeNode* parameterNode;     // 参数节点
 
     // 遍历非空节点
     while (node != NULL) {
@@ -36,6 +36,12 @@ void generateCode(struct treeNode* node){
         } else if (node->statementType == WhileStatement) {
             // 生成 While 语句代码
             generateWhileStatementCode(node);
+        } else if (node->statementType == ForStatement)  {
+            //
+            generateForStatementCode(node);
+        } else if (node->statementType == DoWhileStatement) {
+            //
+            generateDoWhileStatementCode(node);
         } else if (node->statementType == ExpressStatement) {
             // 生成表达式代码
             generateExpressionStatementCode(node, argNum + 1);
@@ -171,6 +177,7 @@ static void generateIfStatementCode(struct treeNode* node) {
 
 static void generateWhileStatementCode(struct treeNode* node) {
     long long* conditionLabel, *endLabel;
+
     // 记录循环跳转地址
     conditionLabel = (code + 1);
     // 生成循环条件表达式代码
@@ -189,6 +196,36 @@ static void generateWhileStatementCode(struct treeNode* node) {
     *code = (long long)conditionLabel;
     // 回填循环结束地址
     *endLabel = (long long)(code + 1);
+}
+
+static void generateForStatementCode(struct treeNode* node) {
+    long long* conditionLabel, *endLabel;
+    generateCode(node->children[0]);
+    conditionLabel = (code + 1);
+    generateCode(node->children[1]);
+    code++;
+    *code = JZ;
+    code++;
+    endLabel = code;
+    generateCode(node->children[3]);
+    generateCode(node->children[2]);
+    code++;
+    *code = JMP;
+    code++;
+    *code = (long long)conditionLabel;
+    *endLabel = (long long)(code + 1);
+}
+
+static void generateDoWhileStatementCode(struct treeNode* node) {
+    long long* conditionLabel, *endLabel;
+
+    conditionLabel = (code + 1);
+    generateCode(node->children[0]);
+    generateCode(node->children[1]);
+    code++;
+    *code = JNZ;
+    code++;
+    *code = (long long)conditionLabel;
 }
 
 /**

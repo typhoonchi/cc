@@ -6,6 +6,77 @@
 #include "utility.h"
 
 static void createTokenString();
+static void scan();
+
+/**
+ * @brief 词法分析, 并打印词素
+ *
+ * 扫描源代码缓冲区, 输出词素, 并打印词素
+ *
+ * @param void
+ * @return void
+ * */
+void getToken(void) {
+    // 词法分析
+    scan();
+    // 打印词素信息
+    if (scanTrace) {
+        printToken(line);
+    }
+}
+
+/**
+ * @brief 初始化关键字信息
+ *
+ * 初始化关键字与系统调用函数 printf
+ *
+ * @param void
+ * @return void
+ * */
+void initKeywords(void) {
+    int record;         // 记录标志位信息
+    char* keywords[10] = {
+            "int", "char", "if", "else", "return", "while", "for", "do", "void", "printf"
+    };                  // 关键字信息
+
+    record = scanTrace;
+    scanTrace = 0;
+    // 扫描关键字
+    for (int i = 0; i < 9; i++) {
+        source = keywords[i];
+        getToken();
+        symbolPtr->token = INT + i;
+    }
+    source = keywords[9];
+    getToken();
+    symbolPtr->class = Sys;
+    symbolPtr->type = Int;
+    symbolPtr->address = PRINTF;
+    // 恢复标志位与相关信息
+    source = sourceDump;
+    scanTrace = record;
+}
+
+/**
+ * @brief 分配词素名称存储区
+ *
+ * 为 tokenString 分配内存空间, 并初始化
+ *
+ * @param   void
+ * @return  void
+ * */
+static void createTokenString() {
+    // 分配词素名称存储区
+    tokenString = malloc(BUFFER_SIZE * sizeof(char));
+    // 判断存储区是否创建成功
+    if (tokenString == NULL) {
+        // 创建失败, 打印错误信息
+        printErrorInformation("Fail to create tokenString", NULL);
+        exit(1);
+    }
+    // 初始化存储区
+    memset(tokenString, 0, BUFFER_SIZE * sizeof(char));
+}
 
 /**
  * @brief 词法分析
@@ -15,7 +86,7 @@ static void createTokenString();
  * @param void
  * @return void
  * */
-void getToken(void) {
+static void scan() {
     int index = 0;                  // 词素名称索引
     char* chPtr = NULL;             // 字符指针
     long long* base = NULL;         // 数据段指针, 存储字符串常量时用于定位数据段初始位置
@@ -61,18 +132,15 @@ void getToken(void) {
                 if ((symbolPtr->hash == token) && !memcmp((char*)symbolPtr->name, chPtr, source - chPtr)) {
                     // 该标识符已存在, 直接返回其 token 类型
                     token = symbolPtr->token;
-                    break;
+                    return;
                 }
                 symbolPtr++;
             }
-            // 判断符号表汇总是否已存在该标识符
-            if (symbolPtr->token == 0) {
-                // 该标识符不存在, 向符号表中插入该标识符的名称, hash 值, token 类型
-                symbolPtr->name = tokenString;
-                symbolPtr->hash = token;
-                token = symbolPtr->token = Id;
-            }
-            break;
+            // 该标识符不存在, 向符号表中插入该标识符的名称, hash 值, token 类型
+            symbolPtr->name = tokenString;
+            symbolPtr->hash = token;
+            token = symbolPtr->token = Id;
+            return;
         } else if (isnumber((int)token)) {
             // 处理数字
             tokenValue = token - '0';
@@ -90,10 +158,10 @@ void getToken(void) {
                     while (isnumber(*source) || (*source >= 'a' && *source <= 'f') || (*source >= 'A' && *source <= 'F')) {
                         token = (unsigned char)*source;
                         source++;
-                         /*很神奇, 利用了 ASCII 码,
-                          * 0 - 9 的 ASCII 码是 0x30 - 0x39
-                          * A - F 的 ASCII 码是 0x41 - 0x46
-                          * a - f 的 ASCII 码是 0x61 - 0x66*/
+                        /*很神奇, 利用了 ASCII 码,
+                         * 0 - 9 的 ASCII 码是 0x30 - 0x39
+                         * A - F 的 ASCII 码是 0x41 - 0x46
+                         * a - f 的 ASCII 码是 0x61 - 0x66*/
                         tokenValue = tokenValue * 16 + (token & 0xF) + (token >= 'A' ? 9 : 0);
                     }
                 } else if ((*source >= '0') && (*source <= '7')) {
@@ -109,7 +177,7 @@ void getToken(void) {
             }
             // 记录词素信息
             token = Num;
-            break;
+            return;
         } else if (token == '\'') {
             // 处理字符
             tokenValue = (long long)*source;
@@ -133,7 +201,7 @@ void getToken(void) {
             source++;
             // 记录词素信息
             token = Char;
-            break;
+            return;
         } else if (token == '"') {
             // 处理字符串
             // 分配词素名称存储区
@@ -173,7 +241,7 @@ void getToken(void) {
             data++;
             // 记录字符串存储首地址信息
             tokenValue = (long long)base;
-            break;
+            return;
         } else if (token == '/') {
             // 处理除法, 单行注释和多行注释
             if (*source == '/') {
@@ -199,7 +267,7 @@ void getToken(void) {
             } else {
                 // 处理除法并记录
                 token = Div;
-                break;
+                return;
             }
         } else if (token == '=') {
             // 处理赋值与等于
@@ -211,7 +279,7 @@ void getToken(void) {
                 // 处理赋值
                 token = Assign;
             }
-            break;
+            return;
         } else if (token == '+') {
             // 处理加法与自增
             if (*source == '+') {
@@ -222,7 +290,7 @@ void getToken(void) {
                 // 处理加法
                 token = Add;
             }
-            break;
+            return;
         } else if (token == '-') {
             // 处理减法与自减
             if (*source == '-') {
@@ -233,15 +301,15 @@ void getToken(void) {
                 // 处理减法
                 token = Sub;
             }
-            break;
+            return;
         } else if (token == '*') {
             // 处理乘法
             token = Mul;
-            break;
+            return;
         } else if (token == '%') {
             // 处理取模
             token = Mod;
-            break;
+            return;
         } else if (token == '!') {
             // 处理非运算与不等于
             if (*source == '=') {
@@ -250,9 +318,9 @@ void getToken(void) {
                 token = Ne;
             } else {
                 // 处理非运算
-                break;
+                return;
             }
-            break;
+            return;
         } else if (token == '&') {
             // 处理按位与与逻辑与
             if (*source == '&') {
@@ -263,7 +331,7 @@ void getToken(void) {
                 // 处理按位与
                 token = And;
             }
-            break;
+            return;
         } else if (token == '|') {
             // 处理按位或与逻辑或
             if (*source == '|') {
@@ -274,11 +342,11 @@ void getToken(void) {
                 // 处理按位或
                 token = Or;
             }
-            break;
+            return;
         } else if (token == '^') {
             // 处理异或
             token = Xor;
-            break;
+            return;
         } else if (token == '<') {
             // 处理小于等于, 小于, 左移
             if (*source == '=') {
@@ -293,7 +361,7 @@ void getToken(void) {
                 // 处理小于
                 token = Lt;
             }
-            break;
+            return;
         } else if (token == '>') {
             // 处理大于等于, 大于, 右移
             if (*source == '=') {
@@ -308,74 +376,17 @@ void getToken(void) {
                 // 处理大于
                 token = Gt;
             }
-            break;
+            return;
         } else if (token == '[') {
             // 处理下标
             token = Bracket;
-            break;
+            return;
         } else if (token == ']' || token == '(' || token == ')' || token == '{' || token == '}' || token == ';' || token == ',') {
             // 处理其余符号
-            break;
+            return;
         } else {
             printErrorInformation("Get Unknown token",NULL);
             exit(1);
         }
     }
-    // 打印词素信息
-    if (scanTrace) {
-        printToken(line);
-    }
-}
-
-/**
- * @brief 初始化关键字信息
- *
- * 初始化关键字与系统调用函数 printf
- *
- * @param void
- * @return void
- * */
-void initKeywords(void) {
-    int record;         // 记录标志位信息
-    char* keywords[8] = {
-            "int", "char", "if", "else", "return", "while", "void", "printf"
-    };                  // 关键字信息
-
-    record = scanTrace;
-    scanTrace = 0;
-    // 扫描关键字
-    for (int i = 0; i < 7; i++) {
-        source = keywords[i];
-        getToken();
-        symbolPtr->token = INT + i;
-    }
-    source = keywords[7];
-    getToken();
-    symbolPtr->class = Sys;
-    symbolPtr->type = Int;
-    symbolPtr->address = PRINTF;
-    // 恢复标志位与相关信息
-    source = sourceDump;
-    scanTrace = record;
-}
-
-/**
- * @brief 分配词素名称存储区
- *
- * 为 tokenString 分配内存空间, 并初始化
- *
- * @param   void
- * @return  void
- * */
-static void createTokenString() {
-    // 分配词素名称存储区
-    tokenString = malloc(BUFFER_SIZE * sizeof(char));
-    // 判断存储区是否创建成功
-    if (tokenString == NULL) {
-        // 创建失败, 打印错误信息
-        printErrorInformation("Fail to create tokenString", NULL);
-        exit(1);
-    }
-    // 初始化存储区
-    memset(tokenString, 0, BUFFER_SIZE * sizeof(char));
 }

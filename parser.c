@@ -30,6 +30,8 @@ static sTreeNode* parseFunctionBody();
 static sTreeNode* parseStatement();
 static sTreeNode* parseIfStatement();
 static sTreeNode* parseWhileStatement();
+static sTreeNode* parseForStatement();
+static sTreeNode* parseDoWhileStatement();
 static sTreeNode* parseReturnStatement();
 static sTreeNode* parseExpressionStatement(int operator);
 
@@ -651,13 +653,23 @@ sTreeNode* parseStatement() {
     } else if (token == WHILE) {
         // 匹配 While 语句
         node = parseWhileStatement();
+    } else if (token == FOR) {
+        // 匹配 For 语句
+        node = parseForStatement();
+    } else if (token == DO) {
+        // 匹配 Do While 语句
+        node = parseDoWhileStatement();
     } else if (token == RETURN) {
         // 匹配 Return 语句
         node = parseReturnStatement();
     } else {
         // 匹配表达式语句
         node = parseExpressionStatement(Assign);
-        match(';');
+        if (token == ',') {
+            match(',');
+        } else {
+            match(';');
+        }
     }
     return node;
 }
@@ -759,6 +771,97 @@ sTreeNode* parseWhileStatement(){
     }
     match('}');
     // 返回 While 语句根节点
+    return node;
+}
+
+/**
+ * @brief 解析 For 语句
+ *
+ * 解析 For 语句
+ *
+ * @param   void
+ * @return  node    返回抽象语法树节点指针, 指向 For 语句子树
+ * */
+static sTreeNode* parseForStatement() {
+    sTreeNode* node = createNode(ForStatement, 0, NULL, 0,
+                                 0, 0, 0);     // While 语句根节点
+    sTreeNode* lastSibling;     // 临时节点
+
+    match(FOR);
+    match('(');
+    node->children[0] = parseExpressionStatement(Assign);
+    lastSibling = node->children[0];
+    while (token == ',') {
+        match(',');
+        lastSibling->sibling = parseExpressionStatement(Assign);
+        lastSibling = lastSibling->sibling;
+    }
+    match(';');
+    node->children[1] = parseExpressionStatement(Assign);
+    match(';');
+    node->children[2] = parseExpressionStatement(Assign);
+    lastSibling = node->children[2];
+    while (token == ',') {
+        match(',');
+        lastSibling->sibling = parseExpressionStatement(Assign);
+        lastSibling = lastSibling->sibling;
+    }
+    match(')');
+    match('{');
+    while (token != '}') {
+        // 将节点加入 While 语句根节点上
+        if (node->children[3] != NULL) {
+            // While 语句根节点非空, 加到最后一个非空节点的兄弟节点上
+            while (lastSibling->sibling != NULL) {
+                lastSibling = lastSibling->sibling;
+            }
+            lastSibling->sibling = parseStatement();
+        } else {
+            // While 语句根节点为空, 当前节点作为 While 语句根节点
+            node->children[3] = parseStatement();
+            lastSibling = node->children[3];
+        }
+    }
+    match('}');
+
+    return node;
+}
+
+/**
+ * @brief 解析 Do While 语句
+ *
+ * 解析 Do While 语句
+ *
+ * @param   void
+ * @return  node    返回抽象语法树节点指针, 指向 Do While 语句子树
+ * */
+static sTreeNode* parseDoWhileStatement() {
+    sTreeNode* node = createNode(DoWhileStatement, 0, NULL, 0,
+                                 0, 0, 0);     // While 语句根节点
+    sTreeNode* lastSibling;     // 临时节点
+
+    match(DO);
+    match('{');
+    while (token != '}') {
+        // 将节点加入 While 语句根节点上
+        if (node->children[0] != NULL) {
+            // While 语句根节点非空, 加到最后一个非空节点的兄弟节点上
+            while (lastSibling->sibling != NULL) {
+                lastSibling = lastSibling->sibling;
+            }
+            lastSibling->sibling = parseStatement();
+        } else {
+            // While 语句根节点为空, 当前节点作为 While 语句根节点
+            node->children[0] = parseStatement();
+            lastSibling = node->children[0];
+        }
+    }
+    match('}');
+    match(WHILE);
+    match('(');
+    node->children[1] = parseExpressionStatement(Assign);
+    match(')');
+    match(';');
     return node;
 }
 

@@ -14,18 +14,18 @@
 #define MAX_SIZE 1024 * 1024
 #define STACK_SIZE 128
 #define BUFFER_SIZE 256
-#define MAX_CHILDREN 3
+#define MAX_CHILDREN 4
 
 
 typedef enum {
-    IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, MLAS, DLAS, RET, LI, LC, SI, SC, PUSH,
+    IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LI, LC, SI, SC, PUSH,
     OR, XOR, AND, EQ, NE, LT, GT, LE, GE, SHL, SHR, ADD, SUB, MUL, DIV, MOD,
     PRINTF, EXIT
 } eInstructionSet;  // 虚拟机指令集
 
 typedef enum {
     Num = 128, Id,
-    INT, CHAR, IF, ELSE, RETURN, WHILE, VOID,
+    INT, CHAR, IF, ELSE, RETURN, WHILE, FOR, DO, VOID,
     Assign, Lor, Land, Or, Xor, And, Eq, Ne,
     Lt, Gt, Le, Ge, Shl, Shr,
     Add, Sub, Mul, Div, Mod, Inc, Dec, Bracket
@@ -44,7 +44,7 @@ typedef enum {
 } eExpressionType;  // 表达式中词素的类别 : 运算符 , 常量 , 标识符 , 函数调用
 
 typedef enum {
-    IfStatement = 1, WhileStatement, ExpressStatement, ReturnStatement,
+    IfStatement = 1, WhileStatement, ForStatement, DoWhileStatement, ExpressStatement, ReturnStatement,
     DeclareStatement, Function, ParameterStatement
 } eStatementType;   // 节点类型 : If 语句 , While 语句 , 表达式语句 , 返回语句 , 变量声明语句 , 函数定义语句 , 参数语句
 

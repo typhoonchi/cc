@@ -51,17 +51,30 @@ void fresh(int a[], int n) {
     int i;
     i = 0;
     while (i < n) {
-        a[i] = i;
+        a[i] = i + 1;
+        printf("%d ",a[i]);
         i = i + 1;
     }
+    printf("whileend\n");
+    i = 0;
+    do {
+        a[i] = i + 2;
+        printf("%d ",a[i]);
+        i = i + 1;
+    } while (i < n);
+    printf("dowhileend\n");
+    for (i = 0; i < n; i = i + 1) {
+        a[i] = i * 3;
+        printf("%d ",a[i]);
+    }
+    printf("forend\n");
 }
 
 int main(){
     int ax, bx,cx[2][2], dx, ex[2];
     int crr[10];
-    crr[5] = 10;
-    printf("%d\n",crr[5]);
-    ax = 5;
+    crr[5] = 10, ax = 5;;;;;
+    printf("%d %d\n",crr[5], ax);
     bx = ax;
     dx = 15;
     arr[1] = 5 * ax;
