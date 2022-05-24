@@ -10,6 +10,8 @@ static int type;
 
 
 static void generateFunctionCode(struct treeNode* node);
+static void generateIfStatementCode(struct treeNode* node);
+static void generateWhileStatementCode(struct treeNode* node);
 static void generateExpressionStatementCode(struct treeNode* node, long long offset);
 
 
@@ -30,49 +32,10 @@ void generateCode(struct treeNode* node){
         // 生成代码
         if (node->statementType == IfStatement) {
             // 生成 If 语句代码
-            // 生成条件判断表达式代码
-            generateCode(node->children[0]);
-            code++;
-            *code = JZ;
-            code++;
-            // 记录条件判断不成立后跳转的地址
-            points[0] = code;
-            // 生成成功分支代码
-            generateCode(node->children[1]);
-            // 判断是否有 Else 语句
-            if (node->children[2] != NULL) {
-                code++;
-                *code = JMP;
-                // 回填条件判断不成立后的目标地址
-                *points[0] = (long long)(code + 2);
-                code++;
-                // 记录条件判断成立后跳转的地址
-                points[0] = code;
-                // 生成失败分支代码
-                generateCode(node->children[2]);
-            }
-            // 回填跳转目标地址
-            *points[0] = (long long)(code + 1);
+            generateIfStatementCode(node);
         } else if (node->statementType == WhileStatement) {
             // 生成 While 语句代码
-            // 记录循环跳转地址
-            points[0] = (code + 1);
-            // 生成循环条件表达式代码
-            generateCode(node->children[0]);
-            code++;
-            *code = JZ;
-            code++;
-            // 记录循环结束地址
-            points[1] = code;
-            // 生成循环体代码
-            generateCode(node->children[1]);
-            code++;
-            *code = JMP;
-            code++;
-            // 回填循环跳转地址
-            *code = (long long)points[0];
-            // 回填循环结束地址
-            *points[1] = (long long)(code + 1);
+            generateWhileStatementCode(node);
         } else if (node->statementType == ExpressStatement) {
             // 生成表达式代码
             generateExpressionStatementCode(node, argNum + 1);
@@ -130,7 +93,7 @@ void generateFunctionCode(struct treeNode* node) {
         while (childNode != NULL) {
             localNum = localNum + size * childNode->value;
             size = size * childNode->value;
-            childNode = childNode->children[0];
+            childNode = childNode->sibling;
         }
         tempNode = tempNode->sibling;
     }
@@ -144,18 +107,6 @@ void generateFunctionCode(struct treeNode* node) {
     while (tempNode->statementType == DeclareStatement) {
         if (tempNode->identifierType > Ptr) {
             size = 1;
-//            code++;
-//            *code = LEA;
-//            code++;
-//            *code = argNum + 1 - tempNode->value;
-//            code++;
-//            *code = PUSH;
-//            code++;
-//            *code = LEA;
-//            code++;
-//            *code = argNum + 1 - tempNode->value + size;
-//            code++;
-//            *code = SI;
             currentAddress = argNum + 1 - tempNode->value + size;
             childNode = tempNode->children[0];
             while (childNode != NULL) {
@@ -176,7 +127,7 @@ void generateFunctionCode(struct treeNode* node) {
                     currentAddress += childNode->value;
                 }
                 size = size * childNode->value;
-                childNode = childNode->children[0];
+                childNode = childNode->sibling;
             }
         }
         tempNode = tempNode->sibling;
@@ -188,6 +139,56 @@ void generateFunctionCode(struct treeNode* node) {
         code++;
         *code = RET;
     }
+}
+
+static void generateIfStatementCode(struct treeNode* node) {
+    long long* falseLabel;
+
+    // 生成条件判断表达式代码
+    generateCode(node->children[0]);
+    code++;
+    *code = JZ;
+    code++;
+    // 记录条件判断不成立后跳转的地址
+    falseLabel = code;
+    // 生成成功分支代码
+    generateCode(node->children[1]);
+    // 判断是否有 Else 语句
+    if (node->children[2] != NULL) {
+        code++;
+        *code = JMP;
+        // 回填条件判断不成立后的目标地址
+        *falseLabel = (long long)(code + 2);
+        code++;
+        // 记录条件判断成立后跳转的地址
+        falseLabel = code;
+        // 生成失败分支代码
+        generateCode(node->children[2]);
+    }
+    // 回填跳转目标地址
+    *falseLabel = (long long)(code + 1);
+}
+
+static void generateWhileStatementCode(struct treeNode* node) {
+    long long* conditionLabel, *endLabel;
+    // 记录循环跳转地址
+    conditionLabel = (code + 1);
+    // 生成循环条件表达式代码
+    generateCode(node->children[0]);
+    code++;
+    *code = JZ;
+    code++;
+    // 记录循环结束地址
+    endLabel = code;
+    // 生成循环体代码
+    generateCode(node->children[1]);
+    code++;
+    *code = JMP;
+    code++;
+    // 回填循环跳转地址
+    *code = (long long)conditionLabel;
+    // 回填循环结束地址
+    *endLabel = (long long)(code + 1);
 }
 
 /**

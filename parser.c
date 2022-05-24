@@ -8,10 +8,11 @@
 
 static sTreeNode** expressionStack;             // 表达式栈
 static int top;                                 // 栈顶
-static long long num;                           // 计数器
+static long long offsetAddress;                 // 参数与局部变量的偏移地址
 
 static void initExpressionStack();
-static sTreeNode* createNode(eStatementType statementType, eExpressionType expressionType, eClass classType, eToken operatorType);
+static sTreeNode* createNode(eStatementType statementType, eType identifierType, char* name, eExpressionType expressionType,
+                             eClass classType, eToken operatorType, long long value);
 static void match(int expected);
 static void checkGlobalId();
 static void checkLocalId();
@@ -22,9 +23,10 @@ static int parseBaseType();
 static void push(sTreeNode* node);
 static sTreeNode* pop();
 static sTreeNode* parseFunction(int type, char* name);
+static sTreeNode* parseGlobalDeclaration(int type, char* name);
+static sTreeNode* parseLocalDeclaration(int type);
 static sTreeNode* parseParameters();
 static sTreeNode* parseFunctionBody();
-static sTreeNode* parseDeclaration(int type, char* name, int mode);
 static sTreeNode* parseStatement();
 static sTreeNode* parseIfStatement();
 static sTreeNode* parseWhileStatement();
@@ -75,7 +77,7 @@ void parse() {
                 // 记录全局变量在数据段中地址
                 symbolPtr->address = (long long)data;
                 data++;
-                node = parseDeclaration(baseType, idName, 0);
+                node = parseGlobalDeclaration(baseType, idName);
                 match(';');
             }
         } else {
@@ -125,11 +127,16 @@ static void initExpressionStack() {
  * 创建 AST 节点, 并初始化内部值
  *
  * @param   statementType   语句类型 If, While, Return,...
+ * @param   identifierType   标识符类型 Int, Char, Void, Ptr
+ * @param   name            标识符名称
  * @param   expressionType  表达式类型 Operator, Constant, Identifier, Call
+ * @param   classType       标识符类别 Glo, Loc, Fun, Sys
  * @param   operatorType    运算符类型 << >> ...
+ * @param   value           常量值或变量地址
  * @return  node            抽象语法树节点指针
  * */
-static sTreeNode* createNode(eStatementType statementType, eExpressionType expressionType, eClass classType, eToken operatorType) {
+static sTreeNode* createNode(eStatementType statementType, eType identifierType, char* name, eExpressionType expressionType,
+                             eClass classType, eToken operatorType, long long value) {
     sTreeNode* node = (sTreeNode*) malloc(sizeof(sTreeNode));     // 创建空节点
 
     // 判断 AST 节点是否创建成功
@@ -138,16 +145,18 @@ static sTreeNode* createNode(eStatementType statementType, eExpressionType expre
         printErrorInformation("Fail to Create AST Node", NULL);
         exit(1);
     }
-    // 初始化节点
-    memset(node, 0, sizeof(sTreeNode));
-    // 初始化语句类型
-    node->statementType = statementType;
     // 初始化孩子节点
     for (int i = 0; i < MAX_CHILDREN; i++) {
         node->children[i] = NULL;
     }
     // 初始化兄弟结点
     node->sibling = NULL;
+    // 初始化语句类型
+    node->statementType = statementType;
+    // 初始化标识符类型
+    node->identifierType = identifierType;
+    // 初始化标识符名称
+    node->name = name;
     //初始化数组相关内容
     node->size = 1;
     // 初始化表达式类型 , 仅当语句类型为表达式时有效
@@ -156,9 +165,8 @@ static sTreeNode* createNode(eStatementType statementType, eExpressionType expre
     node->classType = classType;
     // 初始化运算符类型 , 仅当表达式类型为 Operator 时有效
     node->operatorType = operatorType;
-    // 初始化常量值与变量名
-    node->value = 0;
-    node->name = NULL;
+    // 初始化常量值或变量地址
+    node->value = value;
     return node;
 }
 
@@ -289,19 +297,32 @@ void recoverGlobalId(){
  * @return  type    基本变量类型: Int, Char
  * */
 int parseBaseType(){
+    int baseType;
     if (token == CHAR) {
         match(CHAR);
-        return Char;
-    } else if (token == INT) {
-        match(INT);
-        return Int;
-    } else if (token == VOID) {
-        match(VOID);
-        return Void;
-    } else {
-        printErrorInformation("Get Base Type Error",NULL);
-        exit(1);
+        baseType = Char;
+        while (token == Mul) {
+            baseType += Ptr;
+            match(Mul);
+        }
+        return baseType;
     }
+    if (token == INT) {
+        match(INT);
+        baseType = Int;
+        while (token == Mul) {
+            baseType += Ptr;
+            match(Mul);
+        }
+        return baseType;
+    }
+    if (token == VOID) {
+        match(VOID);
+        baseType = Void;
+        return baseType;
+    }
+    printErrorInformation("Get Base Type Error",NULL);
+    exit(1);
 }
 
 /**
@@ -345,26 +366,23 @@ sTreeNode* pop() {
  * @return  node    抽象语法树节点指针, 指向函数定义子树
  * */
 sTreeNode* parseFunction(int type, char* name){
-    sTreeNode* node = createNode(Function, 0, 0, 0);   // 创建函数根节点
+    sTreeNode* node = createNode(Function, type, name, 0,
+                                 0, 0, (long long)&(symbolPtr->address));   // 创建函数根节点
 
-    // 记录函数返回值类型与函数名
-    node->identifierType = type;
-    node->name = name;
-    // 记录符号表中存放函数在代码段中地址的数据的地址, 代码生成时进行回填
-    node->value = (long long)&(symbolPtr->address);
     // 重置计数器
-    num = 0;
+    offsetAddress = 0;
     match('(');
     // 解析参数列表
     if (token == ')') {
         // 空参列表 void
-        node->children[0] = createNode(ParameterStatement, 0, 0, 0);
+        node->children[0] = createNode(ParameterStatement, 0, NULL, 0,
+                                       0, 0, 0);
         node->children[0]->identifierType = Void;
     } else {
         // 有参列表 解析参数列表
         node->children[0] = parseParameters();
     }
-    num++;
+    offsetAddress++;
     match(')');
     match('{');
     // 解析函数体
@@ -383,6 +401,119 @@ sTreeNode* parseFunction(int type, char* name){
     return node;
 }
 
+/**
+ * @brief 解析全局变量声明语句
+ *
+ * 解析全局变量声明语句,
+ *
+ * @param   type    变量类型
+ * @param   name    变量名
+ * @return  node    抽象语法树节点指针, 指向一条声明语句子树
+ * */
+static sTreeNode* parseGlobalDeclaration(int type, char* name) {
+    sTreeNode* node = createNode(DeclareStatement,type, name, 0,
+                                 0, 0, symbolPtr->address);    // 声明语句节点
+    char* identifierName = NULL;                 // 变量名
+    long long size = 1;                         // 数组大小
+    long long* base = NULL;                     // 数据段指针, 声明数组变量时用于定位数据段初始位置
+
+    // 持续解析全局变量声明
+    while ((token != ',') && (token != ';')) {
+        // 解析数组声明
+        if (token == Bracket) {
+            symbolPtr->type += Ptr;
+            match(Bracket);
+            base = data;
+            for (int i = 0; i < size; i++) {
+                *(base - size + i) = (long long)data;
+                data += tokenValue;
+            }
+            size *= tokenValue;
+            match(Num);
+            match(']');
+        }
+    }
+    // 更新变量类型与数组大小
+    node->identifierType = symbolPtr->type;
+    node->size = size;
+    // 处理逗号及后续变量声明
+    if (token == ',') {
+        // 解析逗号
+        match(',');
+        // 记录变量名
+        identifierName = tokenString;
+        // 全局变量声明
+        symbolPtr->class = Glo;
+        symbolPtr->type = type;
+        symbolPtr->address = (long long)data;
+        data++;
+        match(Id);
+        // 继续解析声明语句
+        node->sibling = parseGlobalDeclaration(node->identifierType,identifierName);
+    }
+    // 返回声明语句根节点
+    return node;
+}
+
+/**
+ * @brief 解析声明语句
+ *
+ * 解析局部变量声明语句
+ *
+ * @param   type    变量类型
+ * @param   name    变量名
+ * @return  node    抽象语法树节点指针, 指向一条声明语句子树
+ * */
+static sTreeNode* parseLocalDeclaration(int type) {
+    sTreeNode* node = createNode(DeclareStatement, type, tokenString, 0,
+                                 0, 0, 0);       // 声明语句节点
+    sTreeNode* lastChildSibling;        // 指向孩子节点的最后一个兄弟节点
+    long long size = 1;                 // 数组大小
+
+    match(Id);
+    // 持续解析变量声明
+    while ((token != ',') && (token != ';')) {
+        // 解析数组声明
+        if (token == Bracket) {
+            symbolPtr->type += Ptr;
+            match(Bracket);
+            size *= tokenValue;
+            offsetAddress += size;
+            // 将数组每一维的大小添加进声明语句的孩子节点, 用于代码生成时初始化数组
+            if (node->children[0] != NULL) {
+                lastChildSibling->sibling = createNode(DeclareStatement, Int, NULL,  0,
+                                                       0, 0, tokenValue);
+                lastChildSibling = lastChildSibling->sibling;
+            } else {
+                node->children[0] = createNode(DeclareStatement, Int, NULL, 0, 0, 0, tokenValue);
+                lastChildSibling = node->children[0];
+            }
+            match(Num);
+            match(']');
+        }
+    }
+    // 回填局部变量的偏移地址
+    symbolPtr->address = offsetAddress;
+    // 更新变量地址, 变量类型与数组大小
+    node->value = symbolPtr->address;
+    node->identifierType = symbolPtr->type;
+    node->size = size;
+    // 处理逗号及后续变量声明
+    if (token == ',') {
+        // 解析逗号
+        match(',');
+        // 局部变量声明
+        checkLocalId();
+        hideGlobalId();
+        symbolPtr->class = Loc;
+        symbolPtr->type = type;
+        offsetAddress++;
+        // 继续解析声明语句
+        node->sibling = parseLocalDeclaration(node->identifierType);
+    }
+    // 返回声明语句根节点
+    return node;
+}
 
 /**
  * @brief 解析参数列表
@@ -393,11 +524,9 @@ sTreeNode* parseFunction(int type, char* name){
  * @return  node    抽象语法树节点指针, 指向参数列表子树
  * */
 sTreeNode* parseParameters(){
-    sTreeNode* node = createNode(ParameterStatement, 0, 0, 0);                 // 参数列表根节点
-    // 获取参数类型
-    node->identifierType = parseBaseType();
-    // 获取参数名称
-    node->name = tokenString;
+    sTreeNode* node = createNode(ParameterStatement,parseBaseType(), tokenString, 0,
+                                 0, 0, 0);                 // 参数列表根节点
+
     // 形参作为局部变量使用
     checkLocalId();
     hideGlobalId();
@@ -420,8 +549,8 @@ sTreeNode* parseParameters(){
     // 更新符号表中局部变量信息
     symbolPtr->class = Loc;
     symbolPtr->type = node->identifierType;
-    symbolPtr->address = num;
-    num++;
+    symbolPtr->address = offsetAddress;
+    offsetAddress++;
     if (token == ',') {
         // 匹配后续参数
         match(',');
@@ -442,144 +571,62 @@ sTreeNode* parseParameters(){
  * */
 sTreeNode* parseFunctionBody(){
     sTreeNode* node = NULL;         // 函数体根节点
+    sTreeNode* statementNode = NULL;
     sTreeNode* lastSibling;         // 临时节点
+    sTreeNode* lastStatementNodeSibling;
     int baseType;                   // 标识符类别
-    char* identifierName;            // 标识符名称
 
-    // 持续解析局部变量声明语句
-    while (token == INT || token == CHAR) {
-        // 获取局部变量类型
-        baseType = parseBaseType();
-        // 获取局部变量名
-        identifierName = tokenString;
-        // 检查是否已声明过该局部变量
-        checkLocalId();
-        // 隐藏全局变量
-        hideGlobalId();
-        symbolPtr->class = Loc;
-        symbolPtr->type = baseType;
-        num++;
-        symbolPtr->address = num;
-        match(Id);
-        // 将节点加入函数体根节点上
-        if (node != NULL) {
-            // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上
-            while (lastSibling->sibling != NULL) {
-                lastSibling = lastSibling->sibling;
-            }
-            lastSibling->sibling = parseDeclaration(baseType,identifierName,1);
-        } else {
-            // 函数体根节点为空, 当前节点作为函数体根节点
-            node = parseDeclaration(baseType, identifierName, 1);
-            lastSibling = node;
-        }
-        match(';');
-    }
     // 持续解析非声明语句
     while (token != '}') {
-        // 将节点加入函数体根节点上
-        if (node !=  NULL) {
-            // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上
-            while (lastSibling->sibling != NULL) {
-                lastSibling = lastSibling->sibling;
-            }
-            lastSibling->sibling = parseStatement();
-        } else {
-            // 函数体根节点为空, 当前节点作为函数体根节点
-            node = parseStatement();
-            lastSibling = node;
-        }
-    }
-    // 返回函数体根节点
-    return node;
-}
-
-/**
- * @brief 解析声明语句
- *
- * 解析全局变量与局部变量声明语句, 根据不同类型的变量采用不同的声明方式
- *
- * @param   type    变量类型
- * @param   name    变量名
- * @param   mode    声明模式 0 全局模式  1 局部模式
- * @return  node    抽象语法树节点指针, 指向一条声明语句子树
- * */
-sTreeNode* parseDeclaration(int type, char* name, int mode){
-    sTreeNode* node = createNode(DeclareStatement, 0, 0, 0);       // 声明语句节点
-    sTreeNode* lastChild;
-    char* identifierName = NULL;         // 变量名
-    long long size = 1;                 // 数组大小
-    long long* base;                    // 数据段指针, 声明数组变量时用于定位数据段初始位置
-
-    // 记录变量名
-    node->name = name;
-    // 持续解析变量声明
-    while ((token != ',') && (token != ';')) {
-        // 解析数组声明
-        if (token == Bracket) {
-            symbolPtr->type += Ptr;
-            match(Bracket);
-            if (!mode) {
-                base = (data - 1);
-                for (int i = 1; i <= size; i++) {
-                    *(base - size + i) = (long long)data;
-                    data += tokenValue;
-                }
-            }
-            size *= tokenValue;
-            if (mode) {
-                num += size;
-            }
-            if (node->children[0] != NULL) {
-                while (lastChild->children[0] != NULL) {
-                    lastChild = lastChild->children[0];
-                }
-                lastChild->children[0] = createNode(DeclareStatement, 0, 0, 0);
-                lastChild->children[0]->value = tokenValue;
-            } else {
-                node->children[0] = createNode(DeclareStatement, 0, 0, 0);
-                node->children[0]->value = tokenValue;
-                lastChild = node->children[0];
-            }
-            match(Num);
-            match(']');
-        }
-    }
-    //
-    if (mode) {
-        symbolPtr->address = num;
-    }
-    // 记录变量地址
-    node->value = symbolPtr->address;
-    // 记录变量类型与数组大小
-    node->identifierType = symbolPtr->type;
-    node->size = size;
-    // 处理逗号及后续变量声明
-    if (token == ',') {
-        // 解析逗号
-        match(',');
-        // 记录变量名
-        identifierName = tokenString;
-        // 判断是全局变量声明还是局部变量声明
-        if (mode) {
-            // 局部变量声明
+        if ((token == INT) || (token == CHAR)) {
+            // 获取局部变量类型
+            baseType = parseBaseType();
+            // 检查是否已声明过该局部变量
             checkLocalId();
+            // 隐藏全局变量
             hideGlobalId();
             symbolPtr->class = Loc;
-            symbolPtr->type = type;
-            num++;
+            symbolPtr->type = baseType;
+            offsetAddress++;
+            // 优先将节点加入函数体根节点上
+            if (node != NULL) {
+                // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上
+                while (lastSibling->sibling != NULL) {
+                    lastSibling = lastSibling->sibling;
+                }
+                lastSibling->sibling = parseLocalDeclaration(baseType);
+            } else {
+                // 函数体根节点为空, 当前节点作为函数体根节点
+                node = parseLocalDeclaration(baseType);
+                lastSibling = node;
+            }
+            match(';');
         } else {
-            // 全局变量声明
-            symbolPtr->class = Glo;
-            symbolPtr->type = type;
-            symbolPtr->address = (long long)data;
-            data++;
+            // 将节点加入函数体根节点上
+            if (statementNode !=  NULL) {
+                // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上
+                lastStatementNodeSibling->sibling = parseStatement();
+                lastStatementNodeSibling = lastStatementNodeSibling->sibling;
+            } else {
+                // 函数体根节点为空, 当前节点作为函数体根节点
+                statementNode = parseStatement();
+                lastStatementNodeSibling = statementNode;
+            }
         }
-        match(Id);
-        // 继续解析声明语句
-        node->sibling = parseDeclaration(node->identifierType,identifierName, mode);
     }
-    // 返回声明语句根节点
+    // 将节点加入函数体根节点上
+    if (node !=  NULL) {
+        // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上
+        lastSibling = node;
+        while (lastSibling->sibling != NULL) {
+            lastSibling = lastSibling->sibling;
+        }
+        lastSibling->sibling = statementNode;
+    } else {
+        // 函数体根节点为空, 当前节点作为函数体根节点
+        node = parseStatement();
+    }
+    // 返回函数体根节点
     return node;
 }
 
@@ -594,6 +641,9 @@ sTreeNode* parseDeclaration(int type, char* name, int mode){
 sTreeNode* parseStatement() {
     sTreeNode* node = NULL;         // 语句根节点
 
+    while (token == ';') {
+        match(';');
+    }
     // 判断语句类型
     if (token == IF) {
         // 匹配 If 语句
@@ -604,12 +654,10 @@ sTreeNode* parseStatement() {
     } else if (token == RETURN) {
         // 匹配 Return 语句
         node = parseReturnStatement();
-    } else if (token == ';') {
-        // 匹配空语句 直接跳过
-        match(';');
     } else {
         // 匹配表达式语句
         node = parseExpressionStatement(Assign);
+        match(';');
     }
     return node;
 }
@@ -623,7 +671,8 @@ sTreeNode* parseStatement() {
  * @return  node    抽象语法树节点指针, 指向 If 语句子树
  * */
 sTreeNode* parseIfStatement(){
-    sTreeNode* node = createNode(IfStatement, 0, 0, 0);    // If 语句根节点
+    sTreeNode* node = createNode(IfStatement, 0, NULL, 0,
+                                 0, 0, 0);    // If 语句根节点
     sTreeNode* lastSibling;     // 临时节点
 
     match(IF);
@@ -683,7 +732,8 @@ sTreeNode* parseIfStatement(){
  * @return  node    返回抽象语法树节点指针, 指向 While 语句子树
  * */
 sTreeNode* parseWhileStatement(){
-    sTreeNode* node = createNode(WhileStatement, 0, 0, 0);     // While 语句根节点
+    sTreeNode* node = createNode(WhileStatement, 0, NULL, 0,
+                                 0, 0, 0);     // While 语句根节点
     sTreeNode* lastSibling;     // 临时节点
 
     match(WHILE);
@@ -721,7 +771,8 @@ sTreeNode* parseWhileStatement(){
  * @return  node    返回抽象语法树节点指针, 指向 Return 语句子树
  * */
 sTreeNode* parseReturnStatement(){
-    sTreeNode* node = createNode(ReturnStatement,0, 0, 0);    // Return 语句根节点
+    sTreeNode* node = createNode(ReturnStatement, 0, NULL, 0,
+                                 0, 0, 0);    // Return 语句根节点
 
     match(RETURN);
     // 解析返回表达式
@@ -748,25 +799,22 @@ sTreeNode* parseExpressionStatement(int operator){
     if (token == Num) {
         // 处理数值常量
         // 为数值常量创建节点
-        node = createNode(ExpressStatement, Constant, 0, 0);
-        node->identifierType = Int;
-        node->value = tokenValue;
+        node = createNode(ExpressStatement, Int, NULL, Constant,
+                          0, 0, tokenValue);
         push(node);
         match(Num);
     } else if (token == Char){
         // 处理字符常量
         // 为字符常量创建节点
-        node = createNode(ExpressStatement, Constant, 0, 0);
-        node->identifierType = Char;
-        node->value = tokenValue;
+        node = createNode(ExpressStatement, Char, NULL, Constant,
+                          0, 0, tokenValue);
         push(node);
         match(Char);
     } else if (token == Char + Ptr) {
         // 处理字符串常量
         // 为字符串常量创建节点
-        node = createNode(ExpressStatement, Constant, 0, 0);
-        node->identifierType = Char + Ptr;
-        node->value = tokenValue;
+        node = createNode(ExpressStatement,Char + Ptr, NULL, Constant,
+                          0, 0, tokenValue);
         push(node);
         match(Char + Ptr);
     } else if (token == Id) {
@@ -776,11 +824,8 @@ sTreeNode* parseExpressionStatement(int operator){
         // 判断是函数调用还是变量
         if (symbolPtr->class == Fun || symbolPtr->class == Sys) {
             // 处理函数调用
-            node = createNode(ExpressStatement, Call, symbolPtr->class, 0);
-            // 记录函数名, 返回值类型与代码段地址
-            node->name = tokenString;
-            node->identifierType = symbolPtr->type;
-            node->value = (long long)&(symbolPtr->address);
+            node = createNode(ExpressStatement,symbolPtr->type, tokenString, Call,
+                              symbolPtr->class, 0, (long long)&(symbolPtr->address));
             match(Id);
             match('(');
             // 持续解析参数列表
@@ -805,11 +850,8 @@ sTreeNode* parseExpressionStatement(int operator){
         } else {
             // 处理变量
             // 为标识符创建节点
-            node = createNode(ExpressStatement, Variable, symbolPtr->class, 0);
-            // 记录变量名, 变量类型与变量地址
-            node->name = tokenString;
-            node->identifierType = symbolPtr->type;
-            node->value = symbolPtr->address;
+            node = createNode(ExpressStatement, symbolPtr->type, tokenString, Variable,
+                              symbolPtr->class, 0, symbolPtr->address);
             match(Id);
         }
         // 判断是否出现非法情况
@@ -827,7 +869,8 @@ sTreeNode* parseExpressionStatement(int operator){
         push(node);
     } else if (token == '!') {
         // 处理单目运算符逻辑非 !
-        node = createNode(ExpressStatement, Operator, 0, '!');
+        node = createNode(ExpressStatement, 0, NULL, Operator,
+                          0, '!', 0);
         match('!');
         node->children[0] = parseExpressionStatement(Inc);
         push(node);
@@ -842,7 +885,8 @@ sTreeNode* parseExpressionStatement(int operator){
         if (token == Assign) {
             // 处理赋值 =
             match(Assign);
-            node = createNode(ExpressStatement, Operator, 0, Assign);
+            node = createNode(ExpressStatement, 0, NULL, Operator,
+                              0, Assign, 0);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Assign);
             push(node);
@@ -850,7 +894,8 @@ sTreeNode* parseExpressionStatement(int operator){
             tempToken = token;
             // 处理逻辑或 || 到 右移 >>
             match((int)token);
-            node = createNode(ExpressStatement, Operator, 0, tempToken);
+            node = createNode(ExpressStatement, 0, NULL, Operator,
+                              0, tempToken, 0);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement((int)(tempToken + 1));
             push(node);
@@ -858,7 +903,8 @@ sTreeNode* parseExpressionStatement(int operator){
             // 处理加 + 到 减 -
             tempToken = token;
             match((int)token);
-            node = createNode(ExpressStatement, Operator, 0, tempToken);
+            node = createNode(ExpressStatement, 0, NULL, Operator,
+                              0, tempToken, 0);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Mul);
             push(node);
@@ -866,14 +912,16 @@ sTreeNode* parseExpressionStatement(int operator){
             // 处理乘 * 到 取模 %
             tempToken = token;
             match((int)token);
-            node = createNode(ExpressStatement, Operator, 0, tempToken);
+            node = createNode(ExpressStatement, 0, NULL, Operator,
+                              0, tempToken, 0);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Bracket);
             push(node);
         } else if (token == Bracket) {
             // 处理下标 []
             match(Bracket);
-            node = createNode(ExpressStatement, Operator, 0, Bracket);
+            node = createNode(ExpressStatement, 0, NULL, Operator,
+                              0, Bracket, 0);
             node->children[0] = pop();
             node->children[1] = parseExpressionStatement(Assign);
             push(node);
@@ -885,4 +933,3 @@ sTreeNode* parseExpressionStatement(int operator){
     }
     return pop();
 }
-
