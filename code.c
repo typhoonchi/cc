@@ -105,6 +105,8 @@ void generateCode(struct treeNode* node){
 void generateFunctionCode(struct treeNode* node) {
     struct treeNode* tempNode, *childNode;      // 临时节点
     long long size = 1;
+    long long base;
+    long long currentAddress;
 
     // 统计局部变量数量
     localNum = 0;
@@ -122,8 +124,8 @@ void generateFunctionCode(struct treeNode* node) {
     // 统计局部变量个数
     tempNode = node->children[1];
     while (tempNode->statementType == DeclareStatement) {
-//        localNum = 1;
         localNum++;
+        size = 1;
         childNode = tempNode->children[0];
         while (childNode != NULL) {
             localNum = localNum + size * childNode->value;
@@ -137,6 +139,48 @@ void generateFunctionCode(struct treeNode* node) {
     *code = NVAR;
     code++;
     *code = localNum;
+    // s
+    tempNode = node->children[1];
+    while (tempNode->statementType == DeclareStatement) {
+        if (tempNode->identifierType > Ptr) {
+            size = 1;
+//            code++;
+//            *code = LEA;
+//            code++;
+//            *code = argNum + 1 - tempNode->value;
+//            code++;
+//            *code = PUSH;
+//            code++;
+//            *code = LEA;
+//            code++;
+//            *code = argNum + 1 - tempNode->value + size;
+//            code++;
+//            *code = SI;
+            currentAddress = argNum + 1 - tempNode->value + size;
+            childNode = tempNode->children[0];
+            while (childNode != NULL) {
+                base = currentAddress;
+                for (int i = 0; i < size; i++) {
+                    code++;
+                    *code = LEA;
+                    code++;
+                    *code = base - size + i;
+                    code++;
+                    *code = PUSH;
+                    code++;
+                    *code = LEA;
+                    code++;
+                    *code = currentAddress;
+                    code++;
+                    *code = SI;
+                    currentAddress += childNode->value;
+                }
+                size = size * childNode->value;
+                childNode = childNode->children[0];
+            }
+        }
+        tempNode = tempNode->sibling;
+    }
     // 生成函数体代码
     generateCode(tempNode);
     // 处理 void 类型函数定义, 补充 RET

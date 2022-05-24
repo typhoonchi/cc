@@ -513,17 +513,13 @@ sTreeNode* parseDeclaration(int type, char* name, int mode){
 
     // 记录变量名
     node->name = name;
-    // 记录变量地址
-    node->value = symbolPtr->address;
     // 持续解析变量声明
     while ((token != ',') && (token != ';')) {
         // 解析数组声明
         if (token == Bracket) {
             symbolPtr->type += Ptr;
             match(Bracket);
-            if (mode) {
-                num += tokenValue;
-            } else {
+            if (!mode) {
                 base = (data - 1);
                 for (int i = 1; i <= size; i++) {
                     *(base - size + i) = (long long)data;
@@ -531,6 +527,9 @@ sTreeNode* parseDeclaration(int type, char* name, int mode){
                 }
             }
             size *= tokenValue;
+            if (mode) {
+                num += size;
+            }
             if (node->children[0] != NULL) {
                 while (lastChild->children[0] != NULL) {
                     lastChild = lastChild->children[0];
@@ -546,6 +545,12 @@ sTreeNode* parseDeclaration(int type, char* name, int mode){
             match(']');
         }
     }
+    //
+    if (mode) {
+        symbolPtr->address = num;
+    }
+    // 记录变量地址
+    node->value = symbolPtr->address;
     // 记录变量类型与数组大小
     node->identifierType = symbolPtr->type;
     node->size = size;
@@ -563,7 +568,6 @@ sTreeNode* parseDeclaration(int type, char* name, int mode){
             symbolPtr->class = Loc;
             symbolPtr->type = type;
             num++;
-            symbolPtr->address = num;
         } else {
             // 全局变量声明
             symbolPtr->class = Glo;

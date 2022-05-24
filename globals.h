@@ -18,7 +18,7 @@
 
 
 typedef enum {
-    IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LI, LC, SI, SC, PUSH,
+    IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, MLAS, DLAS, RET, LI, LC, SI, SC, PUSH,
     OR, XOR, AND, EQ, NE, LT, GT, LE, GE, SHL, SHR, ADD, SUB, MUL, DIV, MOD,
     PRINTF, EXIT
 } eInstructionSet;  // 虚拟机指令集
@@ -36,7 +36,7 @@ typedef enum {
 } eClass;           // 标识符类别 : 函数, 系统调用, 全局变量, 局部变量
 
 typedef enum {
-    Void, Int, Char, Ptr = 5, String
+    Void, Int, Char, Ptr = 5
 } eType;            // 变量或函数返回值类型 : Int, Char, Ptr
 
 typedef enum {
