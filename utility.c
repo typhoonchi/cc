@@ -527,7 +527,6 @@ void printAssemble() {
     long long* dump = codeDump;     // 备份代码备份指针
     // 遍历代码段指针, 打印相关信息
     while (codeDump < code) {
-        ++codeDump;
         fprintf(stdout, "(%lld)  %.5s", (long long)codeDump, instructions[*codeDump]);
         if (*codeDump < RET) {
             ++codeDump;
@@ -535,6 +534,7 @@ void printAssemble() {
         } else {
             fprintf(stdout, "\n");
         }
+        codeDump++;
     }
     // 恢复代码段备份指针
     codeDump = dump;

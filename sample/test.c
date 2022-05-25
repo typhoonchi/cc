@@ -32,24 +32,18 @@
 //    printf("%d\n",c);
 //    return 0;
 //}
-int arr[10], brr[5][5];
+int arr[10];
 
 int main() {
-    int ax[4],bx[3][3][2];
-    char cx[5],ch;
-    brr[1][2] = 4;
-    bx[1][2][0] = 5;
-    printf("%d\n",brr[1][2]);
-    printf("%d\n",bx[1][2][0]);
+    int* ptr;
     int i;
-    i = 5;
-    for (i = 0; i < 5; i = i + 1) {
-        cx[i] = i + 'a';
-        printf("%c",cx[i]);
+    for (i = 0; i < 10; i = i + 1) {
+        arr[i] = i + 1;
+        printf("%d ",arr[i]);
     }
-    cx[4] = '\0';
     printf("\n");
-    printf("%s\n",cx);
+    ptr = arr + 1;
+    printf("%d\n",ptr[0]);
     return 0;
 }
 
