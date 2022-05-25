@@ -33,15 +33,29 @@
 //    return 0;
 //}
 int arr[10];
+int brr[5][5];
 
 int main() {
     int* ptr;
-    int i;
+    int* pptr;
+    int i,j,count;
     for (i = 0; i < 10; i = i + 1) {
         arr[i] = i + 1;
         printf("%d ",arr[i]);
     }
     printf("\n");
+    count = 0;
+    for (i = 0; i < 5; i = i + 1) {
+        for (j = 0; j < 5; j= j + 1) {
+            brr[i][j] = count;
+            count = count + 1;
+            printf("%d ",brr[i][j]);
+        }
+        printf("\n");
+    }
+    pptr = brr[2] + 2;
+    pptr = pptr - 1;
+    printf("%d\n",pptr[0]);
     ptr = arr + 1;
     printf("%d\n",ptr[0]);
     return 0;

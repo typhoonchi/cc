@@ -5,12 +5,6 @@
 #ifndef _GLOBALS_H
 #define _GLOBALS_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <stdbool.h>
-
 #define MAX_SIZE 1024 * 1024
 #define STACK_SIZE 128
 #define BUFFER_SIZE 256
@@ -79,13 +73,9 @@ extern char* sourceDump;
 extern char* tokenString;
 extern long long token, tokenValue;
 extern int line;
-// symbol table & pointer
 extern sSymbol * symbolTable, * symbolPtr;
 extern int scanTrace;
-extern int sourceTrace;
 extern sTreeNode* root;
 extern long long* code, *codeDump, *mainPtr, * stack, * data;
-extern long long* pc, * sp, * bp;
-extern long long ax, cycle;
 
 #endif //_GLOBALS_H

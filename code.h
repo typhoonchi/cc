@@ -9,6 +9,6 @@
 #include "utility.h"
 
 void generateCode(struct treeNode* node);
-void runCode(int argc, char** argv);
+void runCode();
 
 #endif //_CODE_H

@@ -1,6 +1,10 @@
 //
 // Created by zhangyukun on 2022/4/11.
 //
+
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include "globals.h"
 #include "scanner.h"
 #include "utility.h"
@@ -39,7 +43,9 @@ void initKeywords(void) {
             "int", "char", "if", "else", "return", "while", "for", "do", "void", "printf"
     };                  // 关键字信息
 
+    // 记录打印词素标志位信息
     record = scanTrace;
+    // 打印词素标志位置零
     scanTrace = 0;
     // 扫描关键字
     for (int i = 0; i < 9; i++) {
@@ -47,6 +53,7 @@ void initKeywords(void) {
         getToken();
         symbolPtr->token = INT + i;
     }
+    // 处理系统调用函数
     source = keywords[9];
     getToken();
     symbolPtr->class = Sys;
@@ -99,9 +106,6 @@ static void scan() {
         if (token == '\n') {
             // 跳过换行符
             line++;
-            if (scanTrace && sourceTrace) {
-                printSource(line);
-            }
         } else if (token == '#') {
             // 跳过预处理和宏定义等操作
             while ((*source != '\0') && (*source != '\n')) {
@@ -256,9 +260,6 @@ static void scan() {
                 while (!((*source == '*') && (*(source + 1) == '/'))) {
                     if (*source == '\n') {
                         line++;
-                        if (scanTrace && sourceTrace) {
-                            printSource(line);
-                        }
                     }
                     source++;
                 }

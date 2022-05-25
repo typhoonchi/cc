@@ -2,10 +2,19 @@
 // Created by zhangyukun on 2022/4/11.
 //
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
 #include "globals.h"
 #include "utility.h"
 
 static char* sourcePtr = NULL;             // 源代码打印指针
+
+static void printType(int type);
+static void printOperator(int op);
+static void printTab(int n);
 
 /**
  * @brief   载入源代码
@@ -117,6 +126,8 @@ void printToken(int lineNo) {
         case ELSE:
         case RETURN:
         case WHILE:
+        case FOR:
+        case DO:
         case VOID:
             printf("\t%-3d: reserved word  --->   %s\n",lineNo, tokenString);
             break;
@@ -202,28 +213,6 @@ void printToken(int lineNo) {
 }
 
 /**
- * @brief   打印源代码
- *
- * 功能函数, 逐行打印源代码
- *
- * @param   lineNo  行号
- * @return  void
- * */
-void printSource(int lineNo) {
-    printf("%d : ",lineNo);
-    while ((*sourcePtr != '\n') && (*sourcePtr != '\0')){
-        printf("%c",(char)*sourcePtr);
-        sourcePtr++;
-    }
-    if (*sourcePtr != '\0') {
-        printf("%c",(char)*sourcePtr);
-        sourcePtr++;
-    } else {
-        printf("\n");
-    }
-}
-
-/**
  * @brief 打印抽象语法树
  *
  * 递归调用自身, 遍历 AST 树, 打印节点内容
@@ -283,6 +272,38 @@ void printTree(sTreeNode* node, int n) {
             printTab(n + 1);
             printf("While Body:\n");
             printTree(node->children[1], n + 2);
+        } else if (node->statementType == ForStatement) {
+            // 处理 For 语句节点
+            printTab(n);
+            printf("For statement:\n");
+            // 处理初始化表达式
+            printTab(n + 1);
+            printf("Initiation:\n");
+            printTree(node->children[0],n + 2);
+            // 处理条件表达式
+            printTab(n + 1);
+            printf("Conditions:\n");
+            printTree(node->children[1],n + 2);
+            // 处理更新条件
+            printTab(n + 1);
+            printf("While Body:\n");
+            printTree(node->children[2], n + 2);
+            // 处理循环体
+            printTab(n + 1);
+            printf("While Body:\n");
+            printTree(node->children[3], n + 2);
+        } else if (node->statementType == DoWhileStatement) {
+            // 处理 Do While 语句节点
+            printTab(n);
+            printf("Do While statement:\n");
+            // 处理条件表达式
+            printTab(n + 1);
+            printf("Conditions:\n");
+            printTree(node->children[0],n + 2);
+            // 处理循环体
+            printTab(n + 1);
+            printf("Do While Body:\n");
+            printTree(node->children[1], n + 2);
         } else if (node->statementType == ExpressStatement) {
             // 处理表达式语句节点
             printTab(n);
@@ -315,9 +336,11 @@ void printTree(sTreeNode* node, int n) {
             printTab(n);
             printf("Return statement:\n");
             // 处理返回值
-            printTab(n + 1);
-            printf("Return value:\n");
-            printTree(node->children[0], n + 2);
+            if (node->children[0] != NULL) {
+                printTab(n + 1);
+                printf("Return value:\n");
+                printTree(node->children[0], n + 2);
+            }
         } else if (node->statementType == ParameterStatement) {
             // 处理参数节点
             // 根据节点标识符类型打印不同信息
@@ -361,7 +384,7 @@ void printTree(sTreeNode* node, int n) {
  * @param n 制表符个数
  * @return void
  * */
-void printTab(int n) {
+static void printTab(int n) {
     for (int i = 0; i < n; i++) {
         printf("\t|");
     }
@@ -375,7 +398,7 @@ void printTab(int n) {
  * @param   type    类型
  * @return  void
  * */
-void printType(int type) {
+static void printType(int type) {
     // 判断类型, 打印相关信息
     if (type == Int) {
         printf("INT");
@@ -407,7 +430,7 @@ void printType(int type) {
  * @param   op  运算符
  * @return  void
  * */
-void printOperator(int op) {
+static void printOperator(int op) {
     switch (op) {
         case Assign:
             printf("assign(=)");
@@ -493,23 +516,6 @@ void printOperator(int op) {
 }
 
 /**
- * @brief 打印错误信息
- *
- * 打印错误信息到控制台
- *
- * @param   error   错误信息
- * @param   message 具体内容
- * @return  void
- * */
-void printErrorInformation(char* error, const char* message) {
-    if (message == NULL) {
-        fprintf(stderr,"line %d: %s !\n",line, error);
-    } else {
-        fprintf(stderr,"line %d: %s: %s !\n",line, error, message);
-    }
-}
-
-/**
  * @brief 打印汇编结果
  *
  * 打印汇编语言代码
@@ -538,4 +544,21 @@ void printAssemble() {
     }
     // 恢复代码段备份指针
     codeDump = dump;
+}
+
+/**
+ * @brief 打印错误信息
+ *
+ * 打印错误信息到控制台
+ *
+ * @param   error   错误信息
+ * @param   message 具体内容
+ * @return  void
+ * */
+void printErrorInformation(char* error, const char* message) {
+    if (message == NULL) {
+        fprintf(stderr,"line %d: %s !\n",line, error);
+    } else {
+        fprintf(stderr,"line %d: %s: %s !\n",line, error, message);
+    }
 }
