@@ -10,8 +10,6 @@
 #include "globals.h"
 #include "utility.h"
 
-static char* sourcePtr = NULL;             // 源代码打印指针
-
 static void printType(int type);
 static void printOperator(int op);
 static void printTab(int n);
@@ -33,16 +31,7 @@ void loadSrc(const char* fileName){
     // 判断文件是否成功打开.
     if (filePtr == NULL) {
         // 打开文件失败, 打印错误信息.
-        printErrorInformation("Could Not Open Source Code:", fileName);
-        exit(1);
-    }
-    // 分配缓冲区读取源代码.
-    source = (char*)malloc(MAX_SIZE);
-    // 判断源代码区是否分配成功.
-    if (source == NULL) {
-        // 分配源代码区失败, 打印错误信息.
-        printErrorInformation("Could Not Malloc for Source Code", NULL);
-        exit(1);
+        handleErrorInformation(0,FILE_ERROR,"utility.c/loadSrc()", strcat("Could Not Open Source Code:",fileName), NULL);
     }
     // 移动指针到文件末尾 , 获取文件长度.
     fseek(filePtr,0,SEEK_END);
@@ -54,11 +43,11 @@ void loadSrc(const char* fileName){
     // 判断读取源代码是否成功.
     if (size == 0) {
         // 读取源代码失败, 打印错误信息.
-        printErrorInformation("Could Not Read Source Code:", fileName);
+        handleErrorInformation(0, FILE_ERROR, "utility.c/loadSrc()", strcat("Could Not Read Source Code:",fileName), NULL);
         exit(1);
     }
     // 初始化源代码指针, 源代码备份指针.
-    sourcePtr = sourceDump = source;
+    sourceDump = source;
     // 关闭源代码文件.
     fclose(filePtr);
 }
@@ -66,27 +55,50 @@ void loadSrc(const char* fileName){
 /**
  * @brief 初始化编译器
  *
- * 为编译器中用到的符号表, 节点栈, 代码段, 数据段, 堆栈段的分配存储区; 并初始化存储区空间与相关指针
+ * 为编译器中用到的源代码存储区, 符号表, 节点栈, 代码段, 数据段, 堆栈段的分配存储区;
+ * 并初始化存储区空间与相关指针
  *
  * @param   void
  * @return  void
  * */
 void init() {
+    // 分配源代码存储区.
+    source = (char*)malloc(MAX_SIZE);
+    // 判断源代码存储区是否分配成功.
+    if (source == NULL) {
+        // 分配源代码区失败, 打印错误信息.
+        handleErrorInformation(0, INIT_ERROR, "utility.c/init()", "Could Not Malloc Space for Source Code", NULL);
+    }
     // 分配符号表存储区
     symbolTable = (sSymbol*)malloc(MAX_SIZE * sizeof(sSymbol));
+    // 判断符号表码存储区是否分配成功.
+    if (symbolTable == NULL) {
+        // 分配源代码存储区失败, 打印错误信息.
+        handleErrorInformation(0, INIT_ERROR, "utility.c/init()", "Could Not Malloc Space for Symbol Table", NULL);
+    }
     // 分配代码段存储区
     code = (long long*)malloc(MAX_SIZE * sizeof(long long));
+    // 判断代码段码存储区是否分配成功.
+    if (code == NULL) {
+        // 分配代码段码存储区失败, 打印错误信息.
+        handleErrorInformation(0, INIT_ERROR, "utility.c/init()", "Could Not Malloc Space for Code Segment", NULL);
+    }
     // 分配数据段存储区
     data = (long long*)malloc(MAX_SIZE * sizeof(long long));
+    // 判断数据段码存储区是否分配成功.
+    if (data == NULL) {
+        // 分配数据段码存储区失败, 打印错误信息.
+        handleErrorInformation(0, INIT_ERROR, "utility.c/init()", "Could Not Malloc Space for Data Segment", NULL);
+    }
     // 分配堆栈段存储区
     stack = (long long*)malloc(MAX_SIZE * sizeof(long long));
-    // 判断初始化是否成功
-    if (symbolTable == NULL || code == NULL || data == NULL || stack == NULL) {
-        // 初始化失败, 打印错误信息
-        printErrorInformation("Fail to Init", NULL);
-        exit(1);
+    // 判断堆栈段码存储区是否分配成功.
+    if (stack == NULL) {
+        // 分配堆栈段码存储区失败, 打印错误信息.
+        handleErrorInformation(0, INIT_ERROR, "utility.c/init()", "Could Not Malloc Space for Stack Segment", NULL);
     }
     // 初始化存储区
+    memset(source, 0, MAX_SIZE * sizeof(char));
     memset(symbolTable, 0, MAX_SIZE * sizeof(sSymbol));
     memset(code, 0, MAX_SIZE * sizeof(long long));
     memset(data, 0, MAX_SIZE * sizeof(long long));
@@ -551,14 +563,18 @@ void printAssemble() {
  *
  * 打印错误信息到控制台
  *
- * @param   error   错误信息
- * @param   message 具体内容
+ * @param   lineNo      行号
+ * @param   errorCode   错误代码
+ * @param   location    错误位置
+ * @param   error       错误信息
+ * @param   message     具体内容
  * @return  void
  * */
-void printErrorInformation(char* error, const char* message) {
+void handleErrorInformation(int lineNo, eErrorCode errorCode , const char* location, const char* error, const char* message) {
     if (message == NULL) {
-        fprintf(stderr,"line %d: %s !\n",line, error);
+        fprintf(stderr,"line %d: Get an Error in Function %s\n\tError Message: %s !\n",lineNo, location, error);
     } else {
-        fprintf(stderr,"line %d: %s: %s !\n",line, error, message);
+        fprintf(stderr,"line %d: Get an Error in Function %s\n\tError Message: %s\n\tSolution: %s !\n",lineNo, location, error, message);
     }
+    exit(errorCode);
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
 #include "globals.h"
 #include "utility.h"
 #include "parser.h"
@@ -91,8 +92,8 @@ void parse() {
                 match(';');
             }
         } else {
-            printErrorInformation("Get Invalid Statement", NULL);
-            exit(1);
+            handleErrorInformation(line, PARSE_ERROR, "parser.c/parse()",
+                                   "Get Invalid Global Declaration", NULL);
         }
         // 将节点加入根节点上
         if (root != NULL) {
@@ -123,8 +124,8 @@ static void initExpressionStack() {
     // 判断初始化是否成功
     if (expressionStack == NULL) {
         // 初始化失败, 打印错误信息
-        printErrorInformation("Fail to Init", NULL);
-        exit(1);
+        handleErrorInformation(0, PARSE_ERROR, "parser.c/initExpressionStack()",
+                               "Could Not Malloc Space for Expression Stack", NULL);
     }
     memset(expressionStack, 0, STACK_SIZE * sizeof(sTreeNode*));
     // 初始化栈顶
@@ -152,8 +153,8 @@ static sTreeNode* createNode(eStatementType statementType, eType identifierType,
     // 判断 AST 节点是否创建成功
     if (node == NULL) {
         // 创建节点失败
-        printErrorInformation("Fail to Create AST Node", NULL);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parse.c/createNode()",
+                               "Could Not Malloc Space for AST Node", NULL);
     }
     // 初始化孩子节点
     for (int i = 0; i < MAX_CHILDREN; i++) {
@@ -177,6 +178,7 @@ static sTreeNode* createNode(eStatementType statementType, eType identifierType,
     node->operatorType = operatorType;
     // 初始化常量值或变量地址
     node->value = value;
+    // 返回节点指针
     return node;
 }
 
@@ -192,9 +194,9 @@ void match(int expected) {
     // 判断 token  是否匹配
     if (token != expected) {
         // token 不匹配
-        printErrorInformation("Find Unexpect Token",tokenString);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/match()", "Get an Unexpect Token",tokenString);
     }
+    // 取下一个词素
     getToken();
 }
 
@@ -213,13 +215,11 @@ void match(int expected) {
 void checkGlobalId() {
     if (token != Id) {
         // 非标识符
-        printErrorInformation("Get Invalid Identifier",tokenString);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/checkGlobalId()", "Get an Invalid Identifier",tokenString);
     }
     if (symbolPtr->class == Glo) {
         // 已声明全局标识符
-        printErrorInformation("Get Duplicate Declaration",tokenString);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/checkGlobalId()", "Get Duplicate Global Declaration",tokenString);
     }
 }
 
@@ -237,13 +237,11 @@ void checkGlobalId() {
 void checkLocalId() {
     if (token != Id) {
         // 非标识符
-        printErrorInformation("Get Invalid Identifier",tokenString);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()", "Get an Invalid Identifier", tokenString);
     }
     if (symbolPtr->class == Loc) {
         // 已声明局部变量
-        printErrorInformation("Get Duplicate Declaration",tokenString);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()", "Get Duplicate Local Declaration", tokenString);
     }
 }
 
@@ -261,13 +259,11 @@ void checkLocalId() {
 void checkDeclaredId() {
     if (token != Id) {
         // 非标识符
-        printErrorInformation("Get Invalid Identifier",tokenString);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()", "Get an Invalid Identifier", tokenString);
     }
     if (symbolPtr->class == 0) {
         // 未声明标识符
-        printErrorInformation("Get Undeclared Identifier",tokenString);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()", "Get an Undeclared Identifier", tokenString);
     }
 }
 
@@ -308,32 +304,19 @@ void recoverGlobalId(){
  * @return  type    基本变量类型: Int, Char
  * */
 int parseBaseType(){
-    int baseType = 0;
     if (token == CHAR) {
         match(CHAR);
-        baseType = Char;
-        while (token == Mul) {
-            baseType += Ptr;
-            match(Mul);
-        }
-        return baseType;
-    }
-    if (token == INT) {
+        return Char;
+    } else if (token == INT) {
         match(INT);
-        baseType = Int;
-        while (token == Mul) {
-            baseType += Ptr;
-            match(Mul);
-        }
-        return baseType;
-    }
-    if (token == VOID) {
+        return Int;
+    } else if (token == VOID) {
         match(VOID);
-        baseType = Void;
-        return baseType;
+        return Void;
+    } else {
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/parseBaseType()",
+                               "Get an Unknown Base Type",NULL);
     }
-    printErrorInformation("Get Base Type Error",NULL);
-    exit(1);
 }
 
 /**
@@ -359,9 +342,10 @@ void push(sTreeNode* node) {
  *
  * */
 sTreeNode* pop() {
+    // 检查下标是否超出表达式栈范围
     if (top == 0) {
-        printErrorInformation("Get Expression Stack Error", NULL);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/pop()",
+                               "Get an Expression Stack Error", NULL);
     }
     top--;
     return expressionStack[top];
@@ -444,8 +428,10 @@ static sTreeNode* parseGlobalDeclaration(int type, char* name) {
             if (token != Bracket) {
                 // 是最后一组 [], 根据基本类型确定 scale
                 if (type == Int) {
+                    // Int
                     scale = 2;
-                } else if (type == Char) {
+                } else if (type == Char){
+                    // Char
                     scale = 8;
                 }
             }
@@ -477,7 +463,7 @@ static sTreeNode* parseGlobalDeclaration(int type, char* name) {
         // 继续解析声明语句
         node->sibling = parseGlobalDeclaration(type,identifierName);
     }
-    // 返回声明语句根节点
+    // 返回全局变量声明语句根节点
     return node;
 }
 
@@ -511,8 +497,10 @@ static sTreeNode* parseLocalDeclaration(int type) {
             if (token != Bracket) {
                 // 是最后一组 [], 根据基本类型确定 scale
                 if (type == Int) {
+                    // Int
                     scale = 2;
                 } else if (type == Char) {
+                    // Char
                     scale = 8;
                 }
             }
@@ -550,9 +538,9 @@ static sTreeNode* parseLocalDeclaration(int type) {
         symbolPtr->type = type;
         offsetAddress++;
         // 继续解析声明语句
-        node->sibling = parseLocalDeclaration(node->identifierType);
+        node->sibling = parseLocalDeclaration(type);
     }
-    // 返回声明语句根节点
+    // 返回局部变量声明语句根节点
     return node;
 }
 
@@ -1011,7 +999,8 @@ sTreeNode* parseExpressionStatement(int operator){
         // 判断是否出现非法情况
         if (token == Id){
             // 标识符后跟标识符, 非法情况
-            printErrorInformation("Get Invalid Expression Statement", NULL);
+            handleErrorInformation(line, PARSE_ERROR, "parser.c/parseExpressionStatement",
+                                   "Get Two Identifiers Together", NULL);
             exit(1);
         }
         push(node);
@@ -1028,10 +1017,22 @@ sTreeNode* parseExpressionStatement(int operator){
         match('!');
         node->children[0] = parseExpressionStatement(Inc);
         push(node);
+    } else if (token == Add) {
+        // 处理单目运算符正号 +
+        match(Add);
+    } else if (token == Sub) {
+        // 处理单目运算符负号 -
+        node = createNode(ExpressStatement, 0, NULL, Operator,
+                          0, Sub, 0);
+        match(Sub);
+        node->children[0] = createNode(ExpressStatement, Int, NULL, Constant,
+                0, 0, 0);
+        node->children[1] = parseExpressionStatement(Inc);
+        push(node);
     } else {
         // 处理错误信息
-        printErrorInformation("Get Invalid Expression", NULL);
-        exit(1);
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/parseExpressionStatement()",
+                               "Get an Invalid Expression", NULL);
     }
     // 优先级爬山处理表达式运算
     while (token >= operator) {
@@ -1085,8 +1086,9 @@ sTreeNode* parseExpressionStatement(int operator){
             push(node);
             match(']');
         } else {
-            printErrorInformation("Get Invalid Token", tokenString);
-            exit(1);
+            // 处理错误信息
+            handleErrorInformation(line, PARSE_ERROR, "parser.c/parseExpressionStatement()",
+                                   "Get an Invalid Operator", NULL);
         }
     }
     return pop();

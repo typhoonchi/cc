@@ -25,10 +25,10 @@ static int parseTrace = 1;                  // 是否打印 AST
 static int assemblyTrace = 1;               // 是否打印 AST
 
 int main(int argc, char** argv) {
-    // 载入源代码
-    loadSrc(*(argv + 1));
     // 初始化语法分析器
     init();
+    // 载入源代码
+    loadSrc(*(argv + 1));
     // 打印源代码
     printf("%s\n",source);
     // 初始化关键字

@@ -5,6 +5,11 @@ enum e{
 
 int main(){
     enum e x;
+    int xx, y;
+    xx = 3;
+    y = -1;
+    xx = xx - -y;
+    printf("%d\n",xx);
     x = 3;
     printf("%d\n",x);
     return 0;

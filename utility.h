@@ -2,14 +2,14 @@
 // Created by zhangyukun on 2022/4/11.
 //
 
-#ifndef _UTILITY_H
-#define _UTILITY_H
+#ifndef UTILITY_H
+#define UTILITY_H
 
 void loadSrc(const char* fileName);
 void init(void);
 void printToken(int lineNo);
 void printTree(sTreeNode* node, int n);
-void printErrorInformation(char* error, const char* message);
+void handleErrorInformation(int lineNo, eErrorCode errorCode , const char* location, const char* error, const char* message);
 void printAssemble();
 
-#endif //_UTILITY_H
+#endif // UTILITY_H

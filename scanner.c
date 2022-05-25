@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
 #include "globals.h"
 #include "scanner.h"
 #include "utility.h"
@@ -17,8 +18,8 @@ static void scan();
  *
  * 扫描源代码缓冲区, 输出词素, 并打印词素
  *
- * @param void
- * @return void
+ * @param   void
+ * @return  void
  * */
 void getToken(void) {
     // 词法分析
@@ -34,8 +35,8 @@ void getToken(void) {
  *
  * 初始化关键字与系统调用函数 printf
  *
- * @param void
- * @return void
+ * @param   void
+ * @return  void
  * */
 void initKeywords(void) {
     int record;         // 记录标志位信息
@@ -78,8 +79,8 @@ static void createTokenString() {
     // 判断存储区是否创建成功
     if (tokenString == NULL) {
         // 创建失败, 打印错误信息
-        printErrorInformation("Fail to create tokenString", NULL);
-        exit(1);
+        handleErrorInformation(line, SCAN_ERROR, "scanner.c/createTokenString()",
+                               "Could Not Malloc Space for tokenString", NULL);
     }
     // 初始化存储区
     memset(tokenString, 0, BUFFER_SIZE * sizeof(char));
@@ -90,8 +91,8 @@ static void createTokenString() {
  *
  * 扫描源代码缓冲区, 输出词素
  *
- * @param void
- * @return void
+ * @param   void
+ * @return  void
  * */
 static void scan() {
     int index = 0;                  // 词素名称索引
@@ -386,8 +387,8 @@ static void scan() {
             // 处理其余符号
             return;
         } else {
-            printErrorInformation("Get Unknown token",NULL);
-            exit(1);
+            handleErrorInformation(line, SCAN_ERROR, "utility.c/scan()",
+                                   "Get an Unknown token",NULL);
         }
     }
 }

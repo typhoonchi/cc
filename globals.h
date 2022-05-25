@@ -2,17 +2,20 @@
 // Created by zhangyukun on 2022/4/11.
 //
 
-#ifndef _GLOBALS_H
-#define _GLOBALS_H
+#ifndef GLOBALS_H
+#define GLOBALS_H
 
 #define MAX_SIZE 1024 * 1024
 #define STACK_SIZE 128
 #define BUFFER_SIZE 256
 #define MAX_CHILDREN 4
 
+typedef enum {
+    FILE_ERROR = 1, INIT_ERROR, SCAN_ERROR, PARSE_ERROR, CODE_ERROR, RUNNING_ERROR
+} eErrorCode;
 
 typedef enum {
-    IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LA, LI, LC, SA, SI, SC, PUSH,
+    IMM = 1, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LA, LI, LC, SA, SI, SC, PUSH,
     OR, XOR, AND, EQ, NE, LT, GT, LE, GE, SHL, SHR, ADD, SUB, MUL, DIV, MOD,
     PRINTF, EXIT
 } eInstructionSet;  // 虚拟机指令集
@@ -30,17 +33,17 @@ typedef enum {
 } eClass;           // 标识符类别 : 函数, 系统调用, 全局变量, 局部变量
 
 typedef enum {
-    Void, Int, Char, Ptr = 5
-} eType;            // 变量或函数返回值类型 : Int, Char, Ptr
+    Int = 1, Char, Void, Ptr = 5
+} eType;            // 变量或函数返回值类型 : Int, Char, Void, Ptr
 
 typedef enum {
-    Operator = 1, Constant, Variable, Call
+    Constant = 1, Variable, Call, Operator
 } eExpressionType;  // 表达式中词素的类别 : 运算符 , 常量 , 标识符 , 函数调用
 
 typedef enum {
-    IfStatement = 1, WhileStatement, ForStatement, DoWhileStatement, ExpressStatement, ReturnStatement,
-    DeclareStatement, Function, ParameterStatement
-} eStatementType;   // 节点类型 : If 语句 , While 语句 , 表达式语句 , 返回语句 , 变量声明语句 , 函数定义语句 , 参数语句
+    DeclareStatement = 1, Function, ParameterStatement, IfStatement, WhileStatement,
+    ForStatement, DoWhileStatement, ExpressStatement, ReturnStatement,
+} eStatementType;   // 节点类型 : 变量声明语句, 函数定义语句, 参数语句, If 语句, While 语句, For 语句, Do While 语句, 表达式语句, 返回语句
 
 typedef struct symbol{
     eToken token;               // 词素类型
@@ -78,4 +81,4 @@ extern int scanTrace;
 extern sTreeNode* root;
 extern long long* code, *codeDump, *mainPtr, * stack, * data;
 
-#endif //_GLOBALS_H
+#endif // GLOBALS_H

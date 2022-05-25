@@ -10,11 +10,11 @@
 
 #include "code.h"
 
-static long long offsetBase;            // 存放局部变量偏移基准
-static long long localSize;              // 存放局部变量占用空间大小
-static int type;                        // 存放表达式当前结果的类型
-static long long* pc, * sp, * bp;       // pc 指针, sp 指针, bp 指针
-static long long ax, cycle;             // ax寄存器, 循环次数
+static long long offsetBase;                // 存放局部变量偏移基准
+static long long localSize;                 // 存放局部变量占用空间大小
+static int type;                            // 存放表达式当前结果的类型
+static long long* pc, * sp, * bp;           // pc 指针, sp 指针, bp 指针
+static long long ax, cycle;                 // ax寄存器, 循环次数
 
 static void generateFunctionCode(struct treeNode* node);
 static void generateIfStatementCode(struct treeNode* node);
@@ -22,7 +22,6 @@ static void generateWhileStatementCode(struct treeNode* node);
 static void generateForStatementCode(struct treeNode* node);
 static void generateDoWhileStatementCode(struct treeNode* node);
 static void generateExpressionStatementCode(struct treeNode* node);
-
 
 /**
  * @brief 代码生成
@@ -37,7 +36,14 @@ void generateCode(struct treeNode* node){
     // 遍历非空节点
     while (node != NULL) {
         // 生成代码
-        if (node->statementType == IfStatement) {
+        if (node->statementType == DeclareStatement) {
+            // 不处理变量声明语句
+        } else if (node->statementType == Function) {
+            // 生成函数定义代码
+            generateFunctionCode(node);
+        } else if (node->statementType == ParameterStatement) {
+            // 不处理参数列表
+        } else if (node->statementType == IfStatement) {
             // 生成 If 语句代码
             generateIfStatementCode(node);
         } else if (node->statementType == WhileStatement) {
@@ -58,9 +64,9 @@ void generateCode(struct treeNode* node){
             generateExpressionStatementCode(node->children[0]);
             *code = RET;
             code++;
-        } else if (node->statementType == Function) {
-            // 生成函数定义代码
-            generateFunctionCode(node);
+        } else {
+            handleErrorInformation(0, CODE_ERROR, "code.c/generateCode()",
+                                   "Get an Unknown AST node", NULL);
         }
         node = node->sibling;
     }
@@ -75,10 +81,10 @@ void generateCode(struct treeNode* node){
  * @return  void
  * */
 void generateFunctionCode(struct treeNode* node) {
-    struct treeNode* tempNode, *childNode;      // 临时节点
-    long long size, scale;                      // 局部变量数组大小, int_64 与数组元素大小的比值
-    int currentType;                            // 解析时变量当前的类型
-    long long base, currentAddress;             // 要填写的栈基地址, 当前栈偏移地址
+    struct treeNode *tempNode = NULL, *childNode = NULL;    // 临时节点
+    long long size = 1, scale = 1;                          // 局部变量数组大小, int_64 与数组元素大小的比值
+    int currentType = 1;                                    // 解析时变量当前的类型
+    long long base = 1, currentAddress = 1;                 // 要填写的栈基地址, 当前栈偏移地址
 
     // 初始化局部变量空间大小
     localSize = 0;
@@ -202,7 +208,7 @@ void generateFunctionCode(struct treeNode* node) {
  * @return  void
  * */
 static void generateIfStatementCode(struct treeNode* node) {
-    long long* falseLabel;      // 记录分支失败跳转目标地址
+    long long* falseLabel = NULL;      // 记录分支失败跳转目标地址
 
     // 生成条件判断表达式代码
     generateCode(node->children[0]);
@@ -239,7 +245,7 @@ static void generateIfStatementCode(struct treeNode* node) {
  * @return  void
  * */
 static void generateWhileStatementCode(struct treeNode* node) {
-    long long* conditionLabel, *endLabel;   // 记录循环跳转地址与结束地址
+    long long* conditionLabel = NULL, *endLabel = NULL;   // 记录循环跳转地址与结束地址
 
     // 记录循环跳转地址
     conditionLabel = code;
@@ -270,7 +276,7 @@ static void generateWhileStatementCode(struct treeNode* node) {
  * @return  void
  * */
 static void generateForStatementCode(struct treeNode* node) {
-    long long* conditionLabel, *endLabel;   // 记录循环跳转地址与结束地址
+    long long* conditionLabel = NULL, *endLabel = NULL;   // 记录循环跳转地址与结束地址
 
     // 生成初始化部分代码
     generateCode(node->children[0]);
@@ -305,7 +311,7 @@ static void generateForStatementCode(struct treeNode* node) {
  * @return  void
  * */
 static void generateDoWhileStatementCode(struct treeNode* node) {
-    long long* conditionLabel;      // 记录循环跳转地址
+    long long* conditionLabel = NULL;      // 记录循环跳转地址
 
     // 记录循环跳转地址
     conditionLabel = code;
@@ -329,9 +335,10 @@ static void generateDoWhileStatementCode(struct treeNode* node) {
  * @return  void
  * */
 void generateExpressionStatementCode(struct treeNode* node) {
-    long long* point, num;              //
-    int tempType, record;               //
-    struct treeNode* tempNode;          // 临时节点
+    long long* point = NULL;                    // 记录逻辑与, 逻辑或的短路跳转地址
+    long long num = 0;                          // 记录函数调用的参数
+    int tempType = 0, record = 0;               // 记录数据类型与指令
+    struct treeNode* tempNode = NULL;           // 临时节点
 
     // 判断节点是否为空
     if (node == NULL) {
@@ -389,6 +396,39 @@ void generateExpressionStatementCode(struct treeNode* node) {
             *code = LA;
         }
         code++;
+    } else if (node->expressionType == Call) {
+        // 处理函数调用
+        tempNode = node->children[0];
+        num = 0;
+        // 处理参数列表
+        while (tempNode != NULL) {
+            // 处理参数表达式
+            generateExpressionStatementCode(tempNode);
+            *code = PUSH;
+            code++;
+            num++;
+            tempNode = tempNode->sibling;
+        }
+        // 判断是系统调用还是自定义函数调用
+        if (node->classType == Sys) {
+            // 处理系统调用
+            *code = *((long long*)(node->value));
+            code++;
+        } else {
+            // 处理自定义函数调用
+            *code = CALL;
+            code++;
+            *code = *((long long*)(node->value));
+            code++;
+        }
+        // 回收参数空间
+        if (num > 0) {
+            *code = DARG;
+            code++;
+            *code = num;
+            code++;
+        }
+        type = node->identifierType;
     } else if (node->expressionType == Operator) {
         // 处理运算符
         if (node->operatorType == '!') {
@@ -762,41 +802,9 @@ void generateExpressionStatementCode(struct treeNode* node) {
                 }
             }
         }
-    } else if (node->expressionType == Call) {
-        // 处理函数调用
-        tempNode = node->children[0];
-        num = 0;
-        // 处理参数列表
-        while (tempNode != NULL) {
-            // 处理参数表达式
-            generateExpressionStatementCode(tempNode);
-            *code = PUSH;
-            code++;
-            num++;
-            tempNode = tempNode->sibling;
-        }
-        // 判断是系统调用还是自定义函数调用
-        if (node->classType == Sys) {
-            // 处理系统调用
-            *code = *((long long*)(node->value));
-            code++;
-        } else {
-            // 处理自定义函数调用
-            *code = CALL;
-            code++;
-            *code = *((long long*)(node->value));
-            code++;
-        }
-        // 回收参数空间
-        if (num > 0) {
-            *code = DARG;
-            code++;
-            *code = num;
-            code++;
-        }
-        type = node->identifierType;
     } else {
-        return;
+        handleErrorInformation(0, CODE_ERROR, "code,c/generateExpressionStatementCode()",
+                               "Get an Unknown Expression AST Node", NULL);
     }
 }
 
@@ -809,11 +817,15 @@ void generateExpressionStatementCode(struct treeNode* node) {
  * @return  void
  * */
 void runCode(){
-    long long op;           // 记录指令
-    long long* temp;        // 辅助指针
+    long long op = 0;               // 记录指令
+    long long* temp = NULL;         // 辅助指针
 
     // 初始化 sp 指针与 bp指针
     bp = sp = (long long*)((long long)stack + MAX_SIZE);
+    // 初始化 ax
+    ax = 0;
+    // 获取 main 函数入口指令
+    pc = (long long*)(*mainPtr);
     // 初始化栈空间内容
     *sp = EXIT;
     sp--;
@@ -821,12 +833,10 @@ void runCode(){
     temp = sp;
     sp--;
     *sp = (long long)temp;
-    // 获取 main 函数入口指令
-    pc = (long long*)(*mainPtr);
     // 未找到 main 函数入口, 打印错误信息
     if (pc == NULL) {
-        printErrorInformation("Fail to Find main Function", NULL);
-        exit(1);
+        handleErrorInformation(0, RUNNING_ERROR, "code.c/runCode()",
+                               "Could not Find main Function", NULL);
     }
     cycle = 0;
     // 执行指令
@@ -949,7 +959,8 @@ void runCode(){
             temp = sp + pc[1] - 1;
             ax = printf((char*)temp[0], temp[-1], temp[-2], temp[-3], temp[-4], temp[-5]);
         }else {
-            printErrorInformation("Get Unknown Instruction", NULL);
+            handleErrorInformation(0, RUNNING_ERROR, "code.c/runCode()",
+                                   "Get an Unknown Instruction", NULL);
             exit(1);
         }
     }
