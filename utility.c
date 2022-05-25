@@ -518,9 +518,9 @@ void printErrorInformation(char* error, const char* message) {
  * @return  void
  * */
 void printAssemble() {
-    char* instructions [32] = {
+    char* instructions [34] = {
         "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG",
-        "RET", "LI", "LC", "SI", "SC", "PUSH", "OR", "XOR",
+        "RET", "LA", "LI", "LC", "SA", "SI", "SC", "PUSH", "OR", "XOR",
         "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL",
         "SHR", "ADD", "SUB", "MUL", "DIV", "MOD", "PRINTF", "EXIT"
     };                              // 指令集

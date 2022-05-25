@@ -74,6 +74,8 @@ void generateCode(struct treeNode* node){
 void generateFunctionCode(struct treeNode* node) {
     struct treeNode* tempNode, *childNode;      // 临时节点
     long long size = 1;
+    long long scale = 1;
+    int currentType = 1;
     long long base;
     long long currentAddress;
 
@@ -95,9 +97,19 @@ void generateFunctionCode(struct treeNode* node) {
     while (tempNode->statementType == DeclareStatement) {
         localNum++;
         size = 1;
+        scale = 1;
+        currentType = tempNode->identifierType;
         childNode = tempNode->children[0];
         while (childNode != NULL) {
-            localNum = localNum + size * childNode->value;
+            currentType -= Ptr;
+            if (childNode->sibling == NULL) {
+                if (currentType == Int) {
+                    scale = 2;
+                } else if (currentType == Char) {
+                    scale = 8;
+                }
+            }
+            localNum = localNum + size * ((childNode->value % scale) ? (childNode->value / scale + 1) : (childNode->value / scale));
             size = size * childNode->value;
             childNode = childNode->sibling;
         }
@@ -113,10 +125,20 @@ void generateFunctionCode(struct treeNode* node) {
     while (tempNode->statementType == DeclareStatement) {
         if (tempNode->identifierType > Ptr) {
             size = 1;
+            scale = 1;
+            currentType = tempNode->identifierType;
             currentAddress = argNum + 1 - tempNode->value + size;
             childNode = tempNode->children[0];
             while (childNode != NULL) {
                 base = currentAddress;
+                currentType -= Ptr;
+                if (childNode->sibling == NULL) {
+                    if (currentType == Int) {
+                        scale = 2;
+                    } else if (currentType == Char) {
+                        scale = 8;
+                    }
+                }
                 for (int i = 0; i < size; i++) {
                     code++;
                     *code = LEA;
@@ -129,8 +151,8 @@ void generateFunctionCode(struct treeNode* node) {
                     code++;
                     *code = currentAddress;
                     code++;
-                    *code = SI;
-                    currentAddress += childNode->value;
+                    *code = SA;
+                    currentAddress += ((childNode->value % scale) ? (childNode->value / scale + 1) : (childNode->value / scale));
                 }
                 size = size * childNode->value;
                 childNode = childNode->sibling;
@@ -239,7 +261,7 @@ static void generateDoWhileStatementCode(struct treeNode* node) {
  * */
 void generateExpressionStatementCode(struct treeNode* node, long long offset) {
     long long* point, num;      //
-    int tempType;               //
+    int tempType, record;               //
     struct treeNode* tempNode;  // 临时节点
 
     // 判断节点是否为空
@@ -291,7 +313,13 @@ void generateExpressionStatementCode(struct treeNode* node, long long offset) {
         type = node->identifierType;
         // 载入变量
         code++;
-        *code = LI;
+        if (node->identifierType == Int) {
+            *code = LI;
+        } else if (node->identifierType == Char) {
+            *code = LC;
+        } else {
+            *code = LA;
+        }
     } else if (node->expressionType == Operator) {
         // 处理运算符
         if (node->operatorType == '!') {
@@ -310,13 +338,16 @@ void generateExpressionStatementCode(struct treeNode* node, long long offset) {
             // 生成左侧表达式代码
             generateExpressionStatementCode(node->children[0], offset);
             // 把装入变压栈
-            if (*code == LI) {
+            if ((*code == LI) || (*code == LC) || (*code == LA)) {
+                record = (int)(*code + SI - LI);
                 *code = PUSH;
+            } else {
+                exit(1);
             }
             // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
             code++;
-            *code = SI;
+            *code = record;
         } else if (node->operatorType == Lor) {
             // 处理逻辑或 ||
             // 生成左侧表达式代码
@@ -531,6 +562,7 @@ void generateExpressionStatementCode(struct treeNode* node, long long offset) {
             // 生成右侧表达式代码
             generateExpressionStatementCode(node->children[1], offset);
             type = tempType;
+            type = type - Ptr;
             if (type > Ptr) {
                 code++;
                 *code = PUSH;
@@ -540,12 +572,39 @@ void generateExpressionStatementCode(struct treeNode* node, long long offset) {
                 *code = 8;
                 code++;
                 *code = MUL;
+                code++;
+                *code = ADD;
+                code++;
+                *code = LA;
+            } else {
+                if (type == Int) {
+                    code++;
+                    *code = PUSH;
+                    code++;
+                    *code = IMM;
+                    code++;
+                    *code = 4;
+                    code++;
+                    *code = MUL;
+                    code++;
+                    *code = ADD;
+                    code++;
+                    *code = LI;
+                } else if (type == Char) {
+                    code++;
+                    *code = PUSH;
+                    code++;
+                    *code = IMM;
+                    code++;
+                    *code = 1;
+                    code++;
+                    *code = MUL;
+                    code++;
+                    *code = ADD;
+                    code++;
+                    *code = LC;
+                }
             }
-            code++;
-            *code = ADD;
-            code++;
-            *code = LI;
-            type = type - Ptr;
         }
     } else if (node->expressionType == Call) {
         // 处理函数调用
@@ -622,13 +681,18 @@ void runCode(int argc, char** argv){
             ax = (long long)(bp + *pc);
             pc++;
         } else if (op == LC) {
-            ax = *(long long*)ax;
+            ax = *(unsigned char*)ax;
         } else if (op == LI) {
+            ax = *(int*)ax;
+        } else if (op == LA) {
             ax = *(long long*)ax;
         } else if (op == SC) {
-            *(long long*)*sp = ax;
+            *(unsigned char*)*sp = (unsigned char)ax;
             sp++;
         } else if (op == SI) {
+            *(int*)*sp = (int)ax;
+            sp++;
+        } else if (op == SA) {
             *(long long*)*sp = ax;
             sp++;
         } else if (op == PUSH) {

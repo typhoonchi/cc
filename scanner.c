@@ -118,7 +118,8 @@ static void scan() {
             // 记录到 tokenString 中, 供后续使用
             tokenString[index++] = *chPtr;
             while (isalpha(*source) || isnumber(*source) || (*source == '_')) {
-                tokenString[index++] = *source;
+                tokenString[index] = *source;
+                index++;
                 // 计算 hash 值, 加速符号表查找
                 token = token * 147 + (*source);
                 // 源代码指针后移
@@ -191,6 +192,8 @@ static void scan() {
                     tokenValue = '\n';
                 } else if (tokenValue == 't') {
                     tokenValue = '\t';
+                } else if (tokenValue == '0') {
+                    tokenValue = '\0';
                 }
             }
             // 判断是否是正常的字符
@@ -221,24 +224,21 @@ static void scan() {
                         tokenValue = '\n';
                     } else if (tokenValue == 't') {
                         tokenValue = '\t';
+                    } else if (tokenValue == '0') {
+                        tokenValue = '\0';
                     }
                 }
                 // 记录字符串
-                tokenString[index++] = (char)tokenValue;
-                // 特殊处理占位符, 不推荐
-                if ((char)tokenValue == '%') {
-                    *data = (tokenValue << 56) | 0x007F7F7F7F7F7F7F;
-                    data++;
-                } else {
-                    *data = tokenValue | 0x7F7F7F7F7F7F7F00;
-                    data++;
-                }
+                tokenString[index] = (char)tokenValue;
+                *((unsigned char*)(data) + index) = (unsigned char)tokenValue;
+                index++;
             }
+            // 存储 '\0'
+            *((unsigned char*)(data) + index) = '\0';
+            data += ((index % 8) ? (index / 8 + 1) : (index / 8));
             source++;
             // 记录到符号表
             token = Char + Ptr;
-            // 存储 '\0'
-            data++;
             // 记录字符串存储首地址信息
             tokenValue = (long long)base;
             return;

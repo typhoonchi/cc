@@ -18,7 +18,7 @@
 
 
 typedef enum {
-    IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LI, LC, SI, SC, PUSH,
+    IMM, LEA, JMP, JZ, JNZ, CALL, NVAR, DARG, RET, LA, LI, LC, SA, SI, SC, PUSH,
     OR, XOR, AND, EQ, NE, LT, GT, LE, GE, SHL, SHR, ADD, SUB, MUL, DIV, MOD,
     PRINTF, EXIT
 } eInstructionSet;  // 虚拟机指令集

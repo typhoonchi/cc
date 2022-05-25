@@ -417,6 +417,8 @@ static sTreeNode* parseGlobalDeclaration(int type, char* name) {
                                  0, 0, symbolPtr->address);    // 声明语句节点
     char* identifierName = NULL;                 // 变量名
     long long size = 1;                         // 数组大小
+    long long currentSize = 1;                  //
+    long long scale = 1;                        //
     long long* base = NULL;                     // 数据段指针, 声明数组变量时用于定位数据段初始位置
 
     // 持续解析全局变量声明
@@ -425,14 +427,22 @@ static sTreeNode* parseGlobalDeclaration(int type, char* name) {
         if (token == Bracket) {
             symbolPtr->type += Ptr;
             match(Bracket);
-            base = data;
-            for (int i = 0; i < size; i++) {
-                *(base - size + i) = (long long)data;
-                data += tokenValue;
-            }
-            size *= tokenValue;
+            currentSize = tokenValue;
             match(Num);
             match(']');
+            base = data;
+            if (token != Bracket) {
+                if (type == Int) {
+                    scale = 2;
+                } else if (type == Char) {
+                    scale = 8;
+                }
+            }
+            for (int i = 0; i < size; i++) {
+                *(base - size + i) = (long long)data;
+                data += ((currentSize % scale) ? (currentSize / scale + 1) : (currentSize / scale));
+            }
+            size *= currentSize;
         }
     }
     // 更新变量类型与数组大小
@@ -451,7 +461,7 @@ static sTreeNode* parseGlobalDeclaration(int type, char* name) {
         data++;
         match(Id);
         // 继续解析声明语句
-        node->sibling = parseGlobalDeclaration(node->identifierType,identifierName);
+        node->sibling = parseGlobalDeclaration(type,identifierName);
     }
     // 返回声明语句根节点
     return node;
@@ -626,7 +636,7 @@ sTreeNode* parseFunctionBody(){
         lastSibling->sibling = statementNode;
     } else {
         // 函数体根节点为空, 当前节点作为函数体根节点
-        node = parseStatement();
+        node = statementNode;
     }
     // 返回函数体根节点
     return node;
