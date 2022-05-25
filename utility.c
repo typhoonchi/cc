@@ -286,7 +286,7 @@ void printTree(sTreeNode* node, int n) {
             printTree(node->children[1],n + 2);
             // 处理更新条件
             printTab(n + 1);
-            printf("While Body:\n");
+            printf("Update :\n");
             printTree(node->children[2], n + 2);
             // 处理循环体
             printTab(n + 1);
@@ -299,11 +299,11 @@ void printTree(sTreeNode* node, int n) {
             // 处理条件表达式
             printTab(n + 1);
             printf("Conditions:\n");
-            printTree(node->children[0],n + 2);
+            printTree(node->children[1],n + 2);
             // 处理循环体
             printTab(n + 1);
             printf("Do While Body:\n");
-            printTree(node->children[1], n + 2);
+            printTree(node->children[0], n + 2);
         } else if (node->statementType == ExpressStatement) {
             // 处理表达式语句节点
             printTab(n);

@@ -32,34 +32,15 @@
 //    printf("%d\n",c);
 //    return 0;
 //}
+
+//int main() {
+//    int a,b;
+//    a = (b = 2);
+//    printf("%d %d\n",a,b);
+//    return 0;
+//}
 int arr[10];
 int brr[5][5];
-
-int main() {
-    int* ptr;
-    int* pptr;
-    int i,j,count;
-    for (i = 0; i < 10; i = i + 1) {
-        arr[i] = i + 1;
-        printf("%d ",arr[i]);
-    }
-    printf("\n");
-    count = 0;
-    for (i = 0; i < 5; i = i + 1) {
-        for (j = 0; j < 5; j= j + 1) {
-            brr[i][j] = count;
-            count = count + 1;
-            printf("%d ",brr[i][j]);
-        }
-        printf("\n");
-    }
-    pptr = brr[2] + 2;
-    pptr = pptr - 1;
-    printf("%d\n",pptr[0]);
-    ptr = arr + 1;
-    printf("%d\n",ptr[0]);
-    return 0;
-}
 
 //int add(int a, int b) {
 //    int res;
@@ -73,47 +54,46 @@ int main() {
 //    ret = res;
 //    return ret;
 //}
-//
-//void fresh(int a[], int n) {
-//    int i;
-//    i = 0;
-//    while (i < n) {
-//        a[i] = i + 1;
-//        printf("%d ",a[i]);
-//        i = i + 1;
-//    }
-//    printf("whileend\n");
-//    i = 0;
-//    do {
-//        a[i] = i + 2;
-//        printf("%d ",a[i]);
-//        i = i + 1;
-//    } while (i < n);
-//    printf("dowhileend\n");
-//    for (i = 0; i < n; i = i + 1) {
-//        a[i] = i * 3;
-//        printf("%d ",a[i]);
-//    }
-//    printf("forend\n");
-//}
-//
-//int main(){
-//    int ax, bx,cx[2][2], dx, ex[2];
-//    int crr[10];
+
+void fresh(int a[], int n) {
+    int i;
+    i = 0;
+    while (i < n) {
+        a[i] = i + 1;
+        printf("%d ",a[i]);
+        i = i + 1;
+    }
+    printf("whileend\n");
+    i = 0;
+    do {
+        a[i] = i + 2;
+        printf("%d ",a[i]);
+        i = i + 1;
+    } while (i < n);
+    printf("dowhileend\n");
+    for (i = 0; i < n; i = i + 1) {
+        a[i] = i * 2 + 3;
+        printf("%d ",a[i]);
+    }
+    printf("forend\n");
+}
+
+int main(){
+    int ax, bx,cx[2][2], dx, ex[2];
+    bx = ax;
+    dx = 15;
+    int crr[10];
 //    crr[5] = 10, ax = 5;;;;;
 //    printf("%d %d\n",crr[5], ax);
-//    bx = ax;
-//    dx = 15;
 //    arr[1] = 5 * ax;
 //    ex[1] = 6;
 //    cx[1][1] = 13;
-//    int* ptr;
 //    brr[4][4] = ax;
-//    ptr = ex;
-////    printf("%d\n",ptr[1]);
-////    printf("%d\n",arr[1]);
-////    printf("%d\n",brr[4][4]);;
-//    fresh(crr,10);
+//    arr[2] = add(3,5);
+//    printf("%d\n",arr[1]);
+//    printf("%d\n",arr[2]);
+//    printf("%d\n",brr[4][4]);;
+    fresh(crr,10);
 //    fresh(arr, 10);
 //    int j;
 //    j = 0;
@@ -128,5 +108,5 @@ int main() {
 //        j = j + 1;
 //    }
 //    printf("\n");
-//    return 0;
-//}
+    return 0;
+}

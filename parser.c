@@ -492,8 +492,10 @@ static sTreeNode* parseGlobalDeclaration(int type, char* name) {
 static sTreeNode* parseLocalDeclaration(int type) {
     sTreeNode* node = createNode(DeclareStatement, type, tokenString, 0,
                                  0, 0, 0);       // 声明语句节点
-    sTreeNode* lastChildSibling = NULL;         // 指向孩子节点的最后一个兄弟节点
-    long long size = 1;                         // 数组大小
+    sTreeNode* lastChildSibling = NULL;                         // 指向孩子节点的最后一个兄弟节点
+    long long size = 1;                                         // 数组大小
+    long long currentSize = 1;                                  // 解析时变量当前的类型
+    long long spaceSize = 1, scale = 1;                          // 数组空间大小, int_64 与数组元素大小的比值
 
     match(Id);
     // 持续解析变量声明
@@ -502,21 +504,33 @@ static sTreeNode* parseLocalDeclaration(int type) {
         if (token == Bracket) {
             symbolPtr->type += Ptr;
             match(Bracket);
+            currentSize = tokenValue;
+            match(Num);
+            match(']');
+            // 判断是否是最后一组 []
+            if (token != Bracket) {
+                // 是最后一组 [], 根据基本类型确定 scale
+                if (type == Int) {
+                    scale = 2;
+                } else if (type == Char) {
+                    scale = 8;
+                }
+            }
             // 计算数组大小
-            size *= tokenValue;
+            size *= currentSize;
+            spaceSize *= ((currentSize % scale) ? (currentSize / scale + 1) : (currentSize / scale));
             // 计算偏移地址
-            offsetAddress += size;
+            offsetAddress += spaceSize;
             // 将数组每一维的大小添加进声明语句的孩子节点, 用于代码生成时初始化数组
             if (node->children[0] != NULL) {
                 lastChildSibling->sibling = createNode(DeclareStatement, Int, NULL,  0,
-                                                       0, 0, tokenValue);
+                                                       0, 0, currentSize);
                 lastChildSibling = lastChildSibling->sibling;
             } else {
-                node->children[0] = createNode(DeclareStatement, Int, NULL, 0, 0, 0, tokenValue);
+                node->children[0] = createNode(DeclareStatement, Int, NULL, 0,
+                                               0, 0, currentSize);
                 lastChildSibling = node->children[0];
             }
-            match(Num);
-            match(']');
         }
     }
     // 回填局部变量的偏移地址
