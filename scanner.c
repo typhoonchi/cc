@@ -10,6 +10,8 @@
 #include "scanner.h"
 #include "utility.h"
 
+static char *tokenString;                  // token 名称缓冲区
+
 static void createTokenString();
 static void scan();
 
@@ -77,7 +79,7 @@ static void createTokenString() {
     // 分配词素名称存储区.
     tokenString = malloc(BUFFER_SIZE * sizeof(char));
     // 判断存储区是否创建成功.
-    if (tokenString == NULL) {
+    if (NULL == tokenString) {
         // 创建失败, 打印错误信息.
         handleErrorInformation(line, SCAN_ERROR, "scanner.c/createTokenString()",
                                "Could Not Malloc Space for tokenString", NULL);
@@ -104,17 +106,17 @@ static void scan() {
         // 源代码缓冲区指针移动, 向前看一个.
         sourcePtr++;
         // 根据 DFA 处理词素.
-        if (token == '\n') {
+        if ('\n' == token) {
             // 跳过换行符.
             line++;
-        } else if (token == '#') {
+        } else if ('#' == token) {
             // 跳过预处理和宏定义等操作.
             while ((*sourcePtr != '\0') && (*sourcePtr != '\n')) {
                 sourcePtr++;
             }
-        } else if (token == ' ' || token == '\t') {
+        } else if ((' ' == token) || ('\t' == token)) {
             // 跳过.
-        } else if (isalpha((int)token) || token == '_') {
+        } else if (isalpha((int)token) || ('_' == token)) {
             // 处理标识符 ID.
             // 分配词素名称存储区.
             createTokenString();
@@ -122,7 +124,7 @@ static void scan() {
             chPtr = sourcePtr - 1;
             // 记录到 tokenString 中, 供后续使用.
             tokenString[index++] = *chPtr;
-            while (isalpha(*sourcePtr) || isnumber(*sourcePtr) || (*sourcePtr == '_')) {
+            while (isalpha(*sourcePtr) || isnumber(*sourcePtr) || ('_' == *sourcePtr)) {
                 tokenString[index] = *sourcePtr;
                 index++;
                 // 计算 hash 值, 加速符号表查找.
@@ -161,7 +163,7 @@ static void scan() {
                     sourcePtr++;
                 }
             } else {
-                if ((*sourcePtr == 'x') || (*sourcePtr == 'X')) {
+                if (('x' == *sourcePtr) || ('X' == *sourcePtr)) {
                     // 处理十六进制数字.
                     sourcePtr++;
                     while (isnumber(*sourcePtr) || (*sourcePtr >= 'a' && *sourcePtr <= 'f') || (*sourcePtr >= 'A' && *sourcePtr <= 'F')) {
@@ -187,20 +189,20 @@ static void scan() {
             // 记录词素信息.
             token = Num;
             return;
-        } else if (token == '\'') {
+        } else if ('\'' == token) {
             // 处理字符.
             tokenValue = (long long)*sourcePtr;
             sourcePtr++;
             // 判断是否为转义字符.
-            if (tokenValue == '\\') {
+            if ('\\' == tokenValue) {
                 // 处理转义字符.
                 tokenValue = (long long)*sourcePtr;
                 sourcePtr++;
-                if (tokenValue == 'n') {
+                if ('n' == tokenValue) {
                     tokenValue = '\n';
-                } else if (tokenValue == 't') {
+                } else if ('t' == tokenValue) {
                     tokenValue = '\t';
-                } else if (tokenValue == '0') {
+                } else if ('0' == tokenValue) {
                     tokenValue = '\0';
                 }
             }
@@ -214,7 +216,7 @@ static void scan() {
             // 记录词素信息.
             token = Char;
             return;
-        } else if (token == '"') {
+        } else if ('"' == token) {
             // 处理字符串.
             // 定位数据段初始位置.
             base = dataPtr;
@@ -223,15 +225,15 @@ static void scan() {
                 tokenValue = (long long)*sourcePtr;
                 sourcePtr++;
                 // 判断是否为转义字符.
-                if (tokenValue == '\\') {
+                if ('\\' == tokenValue) {
                     // 处理转义字符.
                     tokenValue = (long long)*sourcePtr;
                     sourcePtr++;
-                    if (tokenValue == 'n') {
+                    if ('n' == tokenValue) {
                         tokenValue = '\n';
-                    } else if (tokenValue == 't') {
+                    } else if ('t' == tokenValue) {
                         tokenValue = '\t';
-                    } else if (tokenValue == '0') {
+                    } else if ('0' == tokenValue) {
                         tokenValue = '\0';
                     }
                 }
@@ -248,19 +250,19 @@ static void scan() {
             // 记录字符串存储首地址信息.
             tokenValue = (long long)base;
             return;
-        } else if (token == '/') {
+        } else if ('/' == token) {
             // 处理除法, 单行注释和多行注释.
-            if (*sourcePtr == '/') {
+            if ('/' == *sourcePtr) {
                 // 处理单行注释.
                 while ((*sourcePtr != '\0') && (*sourcePtr != '\n')) {
                     sourcePtr++;
                 }
-            } else if (*sourcePtr == '*') {
+            } else if ('*' == *sourcePtr) {
                 // 处理多行注释.
                 sourcePtr++;
                 // 向前看两个字符, 用于判断 "*/".
-                while (!((*sourcePtr == '*') && (*(sourcePtr + 1) == '/'))) {
-                    if (*sourcePtr == '\n') {
+                while (!(('*' == *sourcePtr) && ('/' == *(sourcePtr + 1)))) {
+                    if ('\n' == *sourcePtr) {
                         line++;
                     }
                     sourcePtr++;
@@ -272,9 +274,9 @@ static void scan() {
                 token = Div;
                 return;
             }
-        } else if (token == '=') {
+        } else if ('=' == token) {
             // 处理赋值与等于.
-            if (*sourcePtr == '=') {
+            if ('=' == *sourcePtr) {
                 // 处理等于.
                 sourcePtr++;
                 token = Eq;
@@ -283,9 +285,9 @@ static void scan() {
                 token = Assign;
             }
             return;
-        } else if (token == '+') {
+        } else if ('+' == token) {
             // 处理加法与自增.
-            if (*sourcePtr == '+') {
+            if ('+' == *sourcePtr) {
                 // 处理自增.
                 sourcePtr++;
                 token = Inc;
@@ -294,9 +296,9 @@ static void scan() {
                 token = Add;
             }
             return;
-        } else if (token == '-') {
+        } else if ('-' == token) {
             // 处理减法与自减.
-            if (*sourcePtr == '-') {
+            if ('-' == *sourcePtr) {
                 // 处理自减.
                 sourcePtr++;
                 token = Dec;
@@ -305,17 +307,17 @@ static void scan() {
                 token = Sub;
             }
             return;
-        } else if (token == '*') {
+        } else if ('*' == token) {
             // 处理乘法.
             token = Mul;
             return;
-        } else if (token == '%') {
+        } else if ('%' == token) {
             // 处理取模.
             token = Mod;
             return;
-        } else if (token == '!') {
+        } else if ('!' == token) {
             // 处理非运算与不等于.
-            if (*sourcePtr == '=') {
+            if ('=' == *sourcePtr) {
                 // 处理不等于.
                 sourcePtr++;
                 token = Ne;
@@ -324,9 +326,9 @@ static void scan() {
                 return;
             }
             return;
-        } else if (token == '&') {
+        } else if ('&' == token) {
             // 处理按位与与逻辑与.
-            if (*sourcePtr == '&') {
+            if ('&' == *sourcePtr) {
                 // 处理逻辑与.
                 sourcePtr++;
                 token = Land;
@@ -335,9 +337,9 @@ static void scan() {
                 token = And;
             }
             return;
-        } else if (token == '|') {
+        } else if ('|' == token) {
             // 处理按位或与逻辑或.
-            if (*sourcePtr == '|') {
+            if ('|' == *sourcePtr) {
                 // 处理逻辑或.
                 sourcePtr++;
                 token = Lor;
@@ -346,17 +348,17 @@ static void scan() {
                 token = Or;
             }
             return;
-        } else if (token == '^') {
+        } else if ('^' == token) {
             // 处理异或.
             token = Xor;
             return;
-        } else if (token == '<') {
+        } else if ('<' == token) {
             // 处理小于等于, 小于, 左移.
-            if (*sourcePtr == '=') {
+            if ('=' == *sourcePtr) {
                 // 处理小于等于.
                 sourcePtr++;
                 token = Le;
-            } else if (*sourcePtr == '<') {
+            } else if ('<' == *sourcePtr) {
                 // 处理左移.
                 sourcePtr++;
                 token = Shl;
@@ -365,13 +367,13 @@ static void scan() {
                 token = Lt;
             }
             return;
-        } else if (token == '>') {
+        } else if ('>' == token) {
             // 处理大于等于, 大于, 右移.
-            if (*sourcePtr == '=') {
+            if ('=' == *sourcePtr) {
                 // 处理大于等于.
                 sourcePtr++;
                 token = Ge;
-            } else if (*sourcePtr == '>') {
+            } else if ('>' == *sourcePtr) {
                 // 处理右移.
                 sourcePtr++;
                 token = Shr;
@@ -380,11 +382,12 @@ static void scan() {
                 token = Gt;
             }
             return;
-        } else if (token == '[') {
+        } else if ('[' == token) {
             // 处理下标.
             token = Bracket;
             return;
-        } else if (token == ']' || token == '(' || token == ')' || token == '{' || token == '}' || token == ';' || token == ',') {
+        } else if ((']' == token) || ('(' == token) || (')' == token) || ('{' == token) ||
+                    ('}' == token) || (';' == token) || (',' == token)) {
             // 处理其余符号.
             return;
         } else {

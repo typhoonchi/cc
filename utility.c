@@ -10,8 +10,8 @@
 #include "globals.h"
 #include "utility.h"
 
-static void loadSrc(const char* fileName);
-static int getBaseFileNameLen(const char* fileName);
+static void loadSrc(const char *fileName);
+static int getBaseFileNameLen(const char *fileName);
 static void initFileLoader(const char *fileName);
 static void initScanner(const char *fileName, int baseLen);
 static void initParser(const char *fileName, int baseLen);
@@ -20,7 +20,7 @@ static void initCodeRunner(const char *fileName, int baseLen);
 static void printType(int type);
 static void printOperator(int op);
 static void printTab(int n);
-static void printNode(sTreeNode* node, int n);
+static void printNode(sTreeNode *node, int n);
 static void destroyNode(sTreeNode *node);
 
 /**
@@ -33,19 +33,27 @@ static void destroyNode(sTreeNode *node);
  * @return  void
  * */
 void init(const char *fileName) {
-    int len = 0;
+    int len = 0;        // 文件名消除扩展名后长度
+
     // 初始化错误信息输出流.
     errorOutputStream = stderr;
+    // 加载源代码文件.
     initFileLoader(fileName);
+    // 获取文件名长度
     len = getBaseFileNameLen(fileName);
+    // 判断执行模式
     if ((phaseFlag >= 8) && (phaseFlag < 0xC)) {
+        // 只进行词法分析初始化.
         initScanner(fileName, len);
     } else if (phaseFlag >= 0xC) {
+        // 进行语法分析初始化.
         initScanner(fileName, len);
         initParser(fileName, len);
         if (phaseFlag >= 0xE) {
+            // 进行代码生成初始化.
             initCodeGenerator(fileName, len);
             if (0xF == phaseFlag) {
+                // 进行代码运行初始化.
                 initCodeRunner(fileName, len);
             }
         }
@@ -121,7 +129,7 @@ void printToken(int lineNo) {
         case 0:
             break;
         case Id:
-            fprintf(scannerOutputStream, "\t%-3d: Id             --->   %s\n", lineNo, tokenString);
+            fprintf(scannerOutputStream, "\t%-3d: Id             --->   %s\n", lineNo, (char*)tokenValue);
             break;
         case Char + Ptr:
             fprintf(scannerOutputStream, "\t%-3d: String         --->   %s\n", lineNo, (char*)tokenValue);
@@ -141,7 +149,7 @@ void printToken(int lineNo) {
         case FOR:
         case DO:
         case VOID:
-            fprintf(scannerOutputStream, "\t%-3d: reserved word  --->   %s\n", lineNo, tokenString);
+            fprintf(scannerOutputStream, "\t%-3d: reserved word  --->   %s\n", lineNo, (char*)tokenValue);
             break;
         case Assign:
             fprintf(scannerOutputStream, "\t%-3d: assign                =\n", lineNo);
@@ -247,13 +255,13 @@ void printTree() {
  * @return  void
  * */
 void printAssemble() {
-    char* instructions [34] = {
+    char *instructions [34] = {
             "IMM", "LEA", "JMP", "JZ", "JNZ", "CALL", "NVAR", "DARG",
             "RET", "LA", "LI", "LC", "SA", "SI", "SC", "PUSH", "OR", "XOR",
             "AND", "EQ", "NE", "LT", "GT", "LE", "GE", "SHL",
             "SHR", "ADD", "SUB", "MUL", "DIV", "MOD", "PRINTF", "EXIT"
     };                                  // 指令集.
-    long long* tempCode = code;         // 临时指针, 定位到代码段起始处.
+    long long *tempCode = code;         // 临时指针, 定位到代码段起始处.
     int lineNo = 1;                     // 代码行号.
     // 遍历代码段指针, 打印相关信息.
     while (tempCode < codePtr) {
@@ -285,8 +293,8 @@ void printAssemble() {
  * @param   message     具体内容.
  * @return  void
  * */
-void handleErrorInformation(int lineNo, eErrorCode errorCode , const char* location, const char* error, const char* message) {
-    if (message == NULL) {
+void handleErrorInformation(int lineNo, eErrorCode errorCode , const char *location, const char *error, const char *message) {
+    if (NULL == message) {
         fprintf(errorOutputStream,"line %d: Get an Error in Function %s\n\tError Message: %s !\n",lineNo, location, error);
     } else {
         fprintf(errorOutputStream,"line %d: Get an Error in Function %s\n\tError Message: %s\n\tMore Information: %s !\n",lineNo, location, error, message);
@@ -302,8 +310,8 @@ void handleErrorInformation(int lineNo, eErrorCode errorCode , const char* locat
  * @param   fileName    源代码文件名
  * @return  void
  * */
-static void loadSrc(const char* fileName){
-    FILE* filePtr = NULL;           // 文件指针.
+static void loadSrc(const char *fileName){
+    FILE *filePtr = NULL;           // 文件指针.
     long size = 0;                 // 存储源代码长度.
 
     // 打开源代码文件.
@@ -340,7 +348,7 @@ static void loadSrc(const char* fileName){
  * @param   fileName  文件路径.
  * @return  baseLen  不带扩展名的文件路径长度.
  * */
-static int getBaseFileNameLen(const char* fileName) {
+static int getBaseFileNameLen(const char *fileName) {
     int baseLen = 0;                             // 消除扩展名后的文件名长度.
     char *chPtr = strchr(fileName, '.');    // 定位扩展名前的 '.' 的位置.
 
@@ -368,7 +376,7 @@ static void initFileLoader(const char *fileName) {
     // 分配源代码存储区并初始化为 0.
     source = (char*)calloc(MAX_SIZE, sizeof(char));
     // 判断源代码存储区是否分配成功.
-    if (source == NULL) {
+    if (NULL == source) {
         // 分配源代码区失败, 打印错误信息.
         handleErrorInformation(0, INIT_ERROR, "utility.c/initFileLoader()",
                                "Could Not Malloc Space for Source Code", NULL);
@@ -389,10 +397,10 @@ static void initFileLoader(const char *fileName) {
  * @return  void
  * */
 static void initScanner(const char *fileName, int baseLen) {
-    char* outputFileName = NULL;        // 词法分析输出文件名.
+    char *outputFileName = NULL;        // 词法分析输出文件名.
 
     // 判断是否重定向到文件中.
-    if (NULL != fileName) {
+    if (fileName != NULL) {
         // 为输出文件名分配空间.
         outputFileName = calloc((strlen(fileName) + 18), sizeof(char));
         // 判断输出文件名空间是否分配成功..
@@ -422,7 +430,7 @@ static void initScanner(const char *fileName, int baseLen) {
     // 分配符号表存储区并初始化为0.
     symbolTable = (sSymbol*)calloc(MAX_SIZE, sizeof(sSymbol));
     // 判断符号表存储区是否分配成功.
-    if (symbolTable == NULL) {
+    if (NULL == symbolTable) {
         // 分配符号表存储区失败, 打印错误信息.
         handleErrorInformation(0, INIT_ERROR, "utility.c/initScanner()",
                                "Could Not Malloc Space for Symbol Table", NULL);
@@ -430,7 +438,7 @@ static void initScanner(const char *fileName, int baseLen) {
     // 分配数据段存储区并初始化为0.
     data = (long long*)calloc(MAX_SIZE, sizeof(long long));
     // 判断数据段存储区是否分配成功.
-    if (data == NULL) {
+    if (NULL == data) {
         // 分配数据段存储区失败, 打印错误信息.
         handleErrorInformation(0, INIT_ERROR, "utility.c/initScanner()",
                                "Could Not Malloc Space for Data Segment", NULL);
@@ -439,6 +447,8 @@ static void initScanner(const char *fileName, int baseLen) {
     symbolPtr = symbolTable;
     // 初始化数据段指针, 指向数据段段开始处.
     dataPtr = data;
+    // 初始化行号.
+    line = 1;
 }
 
 /**
@@ -451,10 +461,10 @@ static void initScanner(const char *fileName, int baseLen) {
  * @return  void
  * */
 static void initParser(const char *fileName, int baseLen) {
-    char* outputFileName = NULL;        // 语法分析输出文件名
+    char *outputFileName = NULL;        // 语法分析输出文件名
 
     // 判断是否重定向到文件中.
-    if (NULL != fileName) {
+    if (fileName != NULL) {
         // 为输出文件名分配空间并初始化为0.
         outputFileName = calloc((strlen(fileName) + 17), sizeof(char));
         // 判断输出文件名空间是否分配成功..
@@ -493,10 +503,10 @@ static void initParser(const char *fileName, int baseLen) {
  * @return  void
  * */
 static void initCodeGenerator(const char *fileName, int baseLen) {
-    char* outputFileName = NULL;        // 代码生成输出文件名
+    char *outputFileName = NULL;        // 代码生成输出文件名
 
     // 判断是否重定向到文件中.
-    if (NULL != fileName) {
+    if (fileName != NULL) {
         // 为输出文件名分配空间并初始化为0.
         outputFileName = calloc((strlen(fileName) + 24), sizeof(char));
         // 判断输出文件名空间是否分配成功..
@@ -526,7 +536,7 @@ static void initCodeGenerator(const char *fileName, int baseLen) {
     // 分配代码段存储区并初始化为0.
     code = (long long*)calloc(MAX_SIZE, sizeof(long long));
     // 判断代码段码存储区是否分配成功.
-    if (code == NULL) {
+    if (NULL == code) {
         // 分配代码段码存储区失败, 打印错误信息.
         handleErrorInformation(0, INIT_ERROR, "utility.c/init()",
                                "Could Not Malloc Space for Code Segment", NULL);
@@ -545,10 +555,10 @@ static void initCodeGenerator(const char *fileName, int baseLen) {
  * @return  void
  * */
 static void initCodeRunner(const char *fileName, int baseLen) {
-    char* outputFileName = NULL;        // 词法分析输出文件名
+    char *outputFileName = NULL;        // 词法分析输出文件名
 
     // 判断是否重定向到文件中.
-    if (NULL != fileName) {
+    if (fileName != NULL) {
         // 为输出文件名分配空间并初始化为0.
         outputFileName = calloc((strlen(fileName) + 21), sizeof(char));
         // 判断输出文件名空间是否分配成功..
@@ -578,7 +588,7 @@ static void initCodeRunner(const char *fileName, int baseLen) {
     // 分配堆栈段存储区并初始化为0.
     stack = (long long*)calloc(MAX_SIZE, sizeof(long long));
     // 判断堆栈段码存储区是否分配成功.
-    if (stack == NULL) {
+    if (NULL == stack) {
         // 分配堆栈段码存储区失败, 打印错误信息.
         handleErrorInformation(0, INIT_ERROR, "utility.c/init()",
                                "Could Not Malloc Space for Stack Segment", NULL);
@@ -594,15 +604,15 @@ static void initCodeRunner(const char *fileName, int baseLen) {
  * */
 static void printType(int type) {
     // 判断类型, 打印相关信息.
-    if (type == Int) {
+    if (Int == type) {
         fprintf(parserOutputStream, "INT");
-    } else if (type == Char) {
+    } else if (Char == type) {
         fprintf(parserOutputStream, "CHAR");
-    } else if (type == Void) {
+    } else if (Void == type) {
         fprintf(parserOutputStream, "VOID");
     } else if (type > Ptr) {
         // 判断是 Int 指针 还是 Char 指针.
-        if (type % Ptr == 1) {
+        if (1 == type % Ptr) {
             // 打印 Int 指针.
             fprintf(parserOutputStream, "INT ");
         } else {
@@ -737,11 +747,11 @@ static void printTab(int n) {
  * @param   n     递归深度.
  * @return  void
  * */
-static void printNode(sTreeNode* node, int n) {
+static void printNode(sTreeNode *node, int n) {
     // 遍历非空节点
     while (node != NULL) {
         // 根据节点语句类型, 采取不同操作.
-        if (node->statementType == Function) {
+        if (Function == node->statementType) {
             // 处理函数节点.
             // 处理函数名与函数返回值类型.
             printTab(n);
@@ -757,7 +767,7 @@ static void printNode(sTreeNode* node, int n) {
             printTab(n + 1);
             fprintf(parserOutputStream, "Function Body:\n");
             printNode(node->children[1], n + 2);
-        } else if (node->statementType == IfStatement) {
+        } else if (IfStatement == node->statementType) {
             // 处理 If 语句节点.
             printTab(n);
             fprintf(parserOutputStream, "IF statement:\n");
@@ -776,7 +786,7 @@ static void printNode(sTreeNode* node, int n) {
                 fprintf(parserOutputStream, "Failure condition:\n");
                 printNode(node->children[2], n + 2);
             }
-        } else if (node->statementType == WhileStatement) {
+        } else if (WhileStatement == node->statementType) {
             // 处理 While 语句节点.
             printTab(n);
             fprintf(parserOutputStream, "While statement:\n");
@@ -788,7 +798,7 @@ static void printNode(sTreeNode* node, int n) {
             printTab(n + 1);
             fprintf(parserOutputStream, "While Body:\n");
             printNode(node->children[1], n + 2);
-        } else if (node->statementType == ForStatement) {
+        } else if (ForStatement == node->statementType) {
             // 处理 For 语句节点.
             printTab(n);
             fprintf(parserOutputStream, "For statement:\n");
@@ -808,7 +818,7 @@ static void printNode(sTreeNode* node, int n) {
             printTab(n + 1);
             fprintf(parserOutputStream, "While Body:\n");
             printNode(node->children[3], n + 2);
-        } else if (node->statementType == DoWhileStatement) {
+        } else if (DoWhileStatement == node->statementType) {
             // 处理 Do While 语句节点.
             printTab(n);
             fprintf(parserOutputStream, "Do While statement:\n");
@@ -820,26 +830,26 @@ static void printNode(sTreeNode* node, int n) {
             printTab(n + 1);
             fprintf(parserOutputStream, "Do While Body:\n");
             printNode(node->children[0], n + 2);
-        } else if (node->statementType == ExpressStatement) {
+        } else if (ExpressStatement == node->statementType) {
             // 处理表达式语句节点.
             printTab(n);
-            if (node->expressionType == Operator) {
+            if (Operator == node->expressionType) {
                 // 打印运算符.
                 printOperator(node->operatorType);
                 fprintf(parserOutputStream, "\n");
-            } else if (node->expressionType == Constant) {
+            } else if (Constant == node->expressionType) {
                 // 打印 Int, Char, String 常量.
-                if (node->identifierType == Char) {
+                if (Char == node->identifierType) {
                     fprintf(parserOutputStream, "Char:   '%c'\n", (char)node->value);
-                } else if (node->identifierType == Int) {
+                } else if (Int == node->identifierType) {
                     fprintf(parserOutputStream, "Num:     %lld\n", node->value);
                 } else {
                     fprintf(parserOutputStream, "String:  %s\n", (char*)node->value);
                 }
-            } else if (node->expressionType == Variable) {
+            } else if (Variable == node->expressionType) {
                 // 打印变量.
                 fprintf(parserOutputStream, "Id:%s\n", node->name);
-            } else if (node->expressionType == Call) {
+            } else if (Call == node->expressionType) {
                 // 打印函数调用.
                 fprintf(parserOutputStream, "Function call:%s\n", node->name);
             }
@@ -847,7 +857,7 @@ static void printNode(sTreeNode* node, int n) {
             printNode(node->children[0], n + 1);
             // 打印右侧子运算符.
             printNode(node->children[1], n + 1);
-        } else if (node->statementType == ReturnStatement) {
+        } else if (ReturnStatement == node->statementType) {
             // 处理返回语句节点.
             printTab(n);
             fprintf(parserOutputStream, "Return statement:\n");
@@ -857,10 +867,10 @@ static void printNode(sTreeNode* node, int n) {
                 fprintf(parserOutputStream, "Return value:\n");
                 printNode(node->children[0], n + 2);
             }
-        } else if (node->statementType == ParameterStatement) {
+        } else if (ParameterStatement == node->statementType) {
             // 处理参数节点.
             // 根据节点标识符类型打印不同信息.
-            if (node->identifierType == Void) {
+            if (Void == node->identifierType) {
                 // 处理空参数列表.
                 printTab(n);
                 printType(node->identifierType);
@@ -872,7 +882,7 @@ static void printNode(sTreeNode* node, int n) {
                 printType(node->identifierType);
                 fprintf(parserOutputStream, ")\n");
             }
-        } else if (node->statementType == DeclareStatement) {
+        } else if (DeclareStatement == node->statementType) {
             // 处理声明语句节点.
             printTab(n);
             fprintf(parserOutputStream, "Declare statement:\n");
@@ -881,7 +891,7 @@ static void printNode(sTreeNode* node, int n) {
             fprintf(parserOutputStream, "Type:");
             printType(node->identifierType);
             // 打印声明变量的名称.
-            if (node->identifierType == INT || node->identifierType == CHAR) {
+            if ((INT == node->identifierType) || (CHAR == node->identifierType)) {
                 fprintf(parserOutputStream, "\t\t\tId name: %s\n", node->name);
             } else {
                 fprintf(parserOutputStream, "\t\t\tId name: %s\t\t\tSize: %lld\n", node->name, node->size);
@@ -902,7 +912,7 @@ static void printNode(sTreeNode* node, int n) {
  * */
 static void destroyNode(sTreeNode *node) {
     // 判断节点是否为空.
-    if (node == NULL) {
+    if (NULL == node) {
         // 空节点, 直接返回.
         return;
     }

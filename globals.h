@@ -76,12 +76,11 @@ typedef struct treeNode{
 extern FILE *scannerOutputStream, *parserOutputStream, *codeGeneratorOutputStream,
                 *codeRunnerOutputStream, *errorOutputStream;
 extern char *source, *sourcePtr;
-extern char *tokenString;
 extern long long token, tokenValue;
 extern int line;
 extern sSymbol *symbolTable, *symbolPtr;
 extern int phaseFlag;
-extern int scanTrace;
+extern int scanTrace, parseTrace, generateTrace;
 extern sTreeNode *root;
 extern long long *code, *codePtr, *mainPtr,
                     *stack, *data, *dataPtr;

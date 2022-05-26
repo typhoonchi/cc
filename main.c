@@ -1,7 +1,5 @@
 
 #include <stdio.h>
-#include <string.h>
-#include <ctype.h>
 
 #include "globals.h"
 #include "utility.h"
@@ -9,24 +7,42 @@
 #include "parser.h"
 #include "code.h"
 
-FILE *scannerOutputStream, *parserOutputStream, *codeGeneratorOutputStream,
-        *codeRunnerOutputStream, *errorOutputStream;                     //
-char *source, *sourcePtr;                // 源代码缓冲区指针源代码备份指针
-char *tokenString;           // token 名称缓冲区
-long long token, tokenValue;        // token类型与值
-int line = 1;                       // 行号
-int phaseFlag = 0xF;                  //阶段标志位 [0x0, 0x8) 不进行任何分析; [0x8, 0xC) 进行到词法分析; [0xC,0xE) 进行到语法分析;
-                                        // [0xE, 0xF) 进行到代码生成; [0xF, 0xF) 进行到代码运行
-int scanTrace = 1;                  // 是否打印词法分析结果
-int parseTrace = 1;                  // 是否打印 AST
-int generateTrace = 1;               // 是否打印代码生成结果
-sTreeNode* root = NULL;             // AST 根节点
-sSymbol* symbolTable, * symbolPtr;  // 符号表与符号表指针
-long long *code, *codePtr, *mainPtr,
-            *stack, *data, *dataPtr;  // 代码段指针, 代码段备份指针, main函数指针, 堆栈段指针, 数据段指针
-
+FILE *scannerOutputStream;          // 词法分析输出流.
+FILE *parserOutputStream;           // 语法分析输出流.
+FILE *codeGeneratorOutputStream;    // 代码生成输出流.
+FILE *codeRunnerOutputStream;       // 代码运行输出流.
+FILE *errorOutputStream;            // 错误输出流.
+char *source;                       // 源代码缓冲区.
+char*sourcePtr;                     // 源代码指针.
+long long token;                    // token类型
+long long tokenValue;               // 常量值, 字符值, 字符串地址或变量名地址.
+int line;                           // 行号.
+int phaseFlag;                      /*阶段标志位:
+ * [0x0, 0x8) 不进行任何分析;
+ * [0x8, 0xC) 进行到词法分析;
+ * [0xC,0xE) 进行到语法分析;
+ * [0xE, 0xF) 进行到代码生成;
+ * [0xF, 0xF) 进行到代码运行.
+ * */
+int scanTrace;                      // 打印标志位: 是否打印词法分析结果.
+int parseTrace;                     // 打印标志位: 是否打印语法分析结果.
+int generateTrace;                  // 打印标志位: 是否打印代码生成结果.
+sTreeNode *root;                    // AST 根节点.
+sSymbol *symbolTable;               // 符号表.
+sSymbol *symbolPtr;                 // 符号表指针.
+long long *code;                    // 代码段.
+long long *codePtr;                 // 代码段指针.
+long long *mainPtr;                 // main函数指针.
+long long *stack;                   // 堆栈段.
+long long *data;                    // 数据段.
+long long *dataPtr;                 // 数据段指针.
 
 int main(int argc, char** argv) {
+    // 初始化标志位.
+    phaseFlag = 0xF;
+    scanTrace = 1;
+    parseTrace = 1;
+    generateTrace = 1;
     // 初始化语法分析器
     init(*(argv + 1));
     // 打印源代码
@@ -59,6 +75,7 @@ int main(int argc, char** argv) {
             }
         }
     }
+    // 回收编译器空间, 关闭相关输出流.
     destroy();
     printf("\nSuccessfully Compile !\n");
     return 0;
