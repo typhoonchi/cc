@@ -5,11 +5,11 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
-void loadSrc(const char* fileName);
-void init(void);
+void init(const char *fileName);
+void destroy();
 void printToken(int lineNo);
-void printTree(sTreeNode* node, int n);
-void handleErrorInformation(int lineNo, eErrorCode errorCode , const char* location, const char* error, const char* message);
+void printTree();
 void printAssemble();
+void handleErrorInformation(int lineNo, eErrorCode errorCode , const char *location, const char *error, const char *message);
 
 #endif // UTILITY_H
