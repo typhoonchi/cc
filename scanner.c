@@ -43,7 +43,8 @@ void getToken(void) {
 void initKeywords(void) {
     int record;         // 记录标志位信息.
     char* keywords[10] = {
-            "int", "char", "if", "else", "return", "while", "for", "do", "void", "printf"
+            "int", "char", "void", "if", "else",
+            "for", "while", "do", "return", "printf"
     };                  // 关键字信息.
 
     // 记录打印词素标志位信息.

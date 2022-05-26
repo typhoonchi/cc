@@ -24,7 +24,7 @@ typedef enum eInstructionSet{
 
 typedef enum eToken{
     Num = 128, Id,
-    INT, CHAR, IF, ELSE, RETURN, WHILE, FOR, DO, VOID,
+    INT, CHAR, VOID, IF, ELSE, FOR, WHILE, DO, RETURN,
     Assign, Lor, Land, Or, Xor, And, Eq, Ne,
     Lt, Gt, Le, Ge, Shl, Shr,
     Add, Sub, Mul, Div, Mod, Inc, Dec, Bracket
