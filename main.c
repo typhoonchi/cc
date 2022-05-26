@@ -43,40 +43,48 @@ int main(int argc, char** argv) {
     scanTrace = 1;
     parseTrace = 1;
     generateTrace = 1;
-    // 初始化语法分析器
-    init(*(argv + 1));
-    // 打印源代码
-    printf("%s\n",source);
-    // 初始化关键字
-    initKeywords();
-    if ((phaseFlag >= 8) && (phaseFlag < 0xC)) {
-        // 只进行词法分析
-        getToken();
-        while (token > 0) {
+    // 根据传入的参数个数, 处理输入所有源代码文件
+    for (int i = 1; i < argc; i++) {
+        // 初始化语法分析器
+        init(*(argv + i));
+        // 打印源代码
+        printf("%s\n",source);
+        // 初始化关键字
+        initKeywords();
+        if ((phaseFlag >= 8) && (phaseFlag < 0xC)) {
+            // 只进行词法分析
             getToken();
-        }
-    } else if (phaseFlag >= 0xC){
-        // 进行语法分析
-        parse();
-        if (parseTrace) {
-            // 打印 AST
-            printTree();
-        }
-        if (phaseFlag >= 0xE){
-            // 进行代码生成
-            generateCode(root);
-            if (generateTrace) {
-                // 打印代码生成结果
-                printAssemble();
+            while (token > 0) {
+                getToken();
             }
-            if (0xF == phaseFlag) {
-                // 运行代码
-                runCode();
+        } else if (phaseFlag >= 0xC){
+            // 进行语法分析
+            parse();
+            if (parseTrace) {
+                // 打印 AST
+                printTree();
+            }
+            if (phaseFlag >= 0xE){
+                // 进行代码生成
+                generateCode(root);
+                if (generateTrace) {
+                    // 打印代码生成结果
+                    printAssemble();
+                }
+                if (0xF == phaseFlag) {
+                    // 运行代码
+                    runCode();
+                }
             }
         }
+        // 回收编译器空间, 关闭相关输出流.
+        destroy();
     }
-    // 回收编译器空间, 关闭相关输出流.
-    destroy();
-    printf("\nSuccessfully Compile !\n");
+    // 打印结束信息
+    if (argc < 3) {
+        printf("\nSuccessfully Compile %d File!\n", argc - 1);
+    } else {
+        printf("\nSuccessfully Compile %d Files!\n", argc - 1);
+    }
     return 0;
 }
