@@ -215,7 +215,7 @@ static void scan() {
             }
             sourcePtr++;
             // 记录词素信息.
-            token = Char;
+            token = Character;
             return;
         } else if ('"' == token) {
             // 处理字符串.
@@ -247,7 +247,7 @@ static void scan() {
             dataPtr += ((index % 8) ? (index / 8 + 1) : (index / 8));
             sourcePtr++;
             // 记录到符号表.
-            token = Char + Ptr;
+            token = String;
             // 记录字符串存储首地址信息.
             tokenValue = (long long)base;
             return;
@@ -393,7 +393,7 @@ static void scan() {
             return;
         } else {
             // 异常 token, 打印错误信息.
-            handleErrorInformation(line, SCAN_ERROR, "utility.c/scan()",
+            handleErrorInformation(line, SCAN_ERROR, "scanner.c/scan()",
                                    "Get an Unknown token",NULL);
         }
     }

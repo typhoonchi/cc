@@ -961,14 +961,14 @@ sTreeNode *parseExpressionStatement(int operator){
                           0, 0, tokenValue);
         push(node);
         match(Num);
-    } else if (Char == token){
+    } else if (Character == token){
         // 处理字符常量.
         // 为字符常量创建节点.
         node = createNode(ExpressStatement, Char, NULL, Constant,
                           0, 0, tokenValue);
         push(node);
         match(Char);
-    } else if (Char + Ptr == token) {
+    } else if (String == token) {
         // 处理字符串常量.
         // 为字符串常量创建节点.
         node = createNode(ExpressStatement,Char + Ptr, NULL, Constant,

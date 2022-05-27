@@ -23,7 +23,7 @@ typedef enum eInstructionSet{
 } eInstructionSet;  // 虚拟机指令集
 
 typedef enum eToken{
-    Num = 128, Id,
+    Num = 128, Character, String, Id,
     INT, CHAR, VOID, IF, ELSE, FOR, WHILE, DO, RETURN,
     Assign, Lor, Land, Or, Xor, And, Eq, Ne,
     Lt, Gt, Le, Ge, Shl, Shr,
@@ -40,7 +40,7 @@ typedef enum eType{
 
 typedef enum eExpressionType{
     Constant = 1, Variable, Call, Operator
-} eExpressionType;  // 表达式中词素的类别: 运算符 , 常量 , 标识符 , 函数调用
+} eExpressionType;  // 表达式中词素的类型: 运算符 , 常量 , 标识符 , 函数调用
 
 typedef enum eStatementType{
     DeclareStatement = 1, Function, ParameterStatement, IfStatement, WhileStatement,
@@ -57,17 +57,16 @@ typedef struct symbol{
     eClass gloClass;            // 局部变量遮罩全局变量时备份标识符类别
     eType gloType;              // 局部变量遮罩全局变量时备份标识符类型
     long long gloAddress;       // 局部变量遮罩全局变量时备份标识符地址
-
 } sSymbol;      // 符号表结构体
 
 typedef struct treeNode{
-    struct treeNode* children[MAX_CHILDREN];    // AST 孩子节点指针
-    struct treeNode* sibling;                   // AST 兄弟节点指针
+    struct treeNode *children[MAX_CHILDREN];    // AST 孩子节点指针
+    struct treeNode *sibling;                   // AST 兄弟节点指针
     eStatementType statementType;               // 节点类型
     eType identifierType;                        // 标识符类型
     char* name;                                 // 标识符名
     long long size;                             // 数组大小
-    eExpressionType expressionType;             // 表达式词素类别
+    eExpressionType expressionType;             // 表达式词素类型
     eClass classType;                           // 标识符类别
     eToken operatorType;                        // 运算符类型
     long long value;                            // 常量值
