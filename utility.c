@@ -128,31 +128,47 @@ void printToken(int lineNo) {
     switch (token) {
         case 0:
             break;
-        case Id:
-            fprintf(scannerOutputStream, "\t%-3d: Id             --->   %s\n", lineNo, (char*)tokenValue);
-            break;
-        case Char + Ptr:
-            fprintf(scannerOutputStream, "\t%-3d: String         --->   %s\n", lineNo, (char*)tokenValue);
-            break;
-        case Char:
-            fprintf(scannerOutputStream, "\t%-3d: Char           --->   %c\n", lineNo, (char)tokenValue);
+        case '!':
+        case ']':
+        case '(':
+        case ')':
+        case '{':
+        case '}':
+        case ',':
+        case ';':
+            fprintf(scannerOutputStream, "\t%-3d:                      %c\n", lineNo, (char)token);
             break;
         case Num:
             fprintf(scannerOutputStream, "\t%-3d: Num            --->   %lld\n", lineNo, tokenValue);
             break;
-        case CHAR:
+        case Character:
+            fprintf(scannerOutputStream, "\t%-3d: Char           --->   %c\n", lineNo, (char)tokenValue);
+            break;
+        case String:
+            fprintf(scannerOutputStream, "\t%-3d: String         --->   %s\n", lineNo, (char*)tokenValue);
+            break;
+        case Id:
+            fprintf(scannerOutputStream, "\t%-3d: Id             --->   %s\n", lineNo, (char*)tokenValue);
+            break;
         case INT:
+        case CHAR:
+        case VOID:
         case IF:
         case ELSE:
-        case RETURN:
-        case WHILE:
         case FOR:
+        case WHILE:
         case DO:
-        case VOID:
+        case RETURN:
             fprintf(scannerOutputStream, "\t%-3d: reserved word  --->   %s\n", lineNo, (char*)tokenValue);
             break;
         case Assign:
             fprintf(scannerOutputStream, "\t%-3d: assign                =\n", lineNo);
+            break;
+        case Lor:
+            fprintf(scannerOutputStream, "\t%-3d: lor                  ||\n", lineNo);
+            break;
+        case Land:
+            fprintf(scannerOutputStream, "\t%-3d: land                 &&\n", lineNo);
             break;
         case Or:
             fprintf(scannerOutputStream, "\t%-3d: or                    |\n", lineNo);
@@ -163,11 +179,29 @@ void printToken(int lineNo) {
         case And:
             fprintf(scannerOutputStream, "\t%-3d: and                   &\n", lineNo);
             break;
+        case Eq:
+            fprintf(scannerOutputStream, "\t%-3d: eq                   ==\n", lineNo);
+            break;
+        case Ne:
+            fprintf(scannerOutputStream, "\t%-3d: ne                   !=\n", lineNo);
+            break;
         case Lt:
             fprintf(scannerOutputStream, "\t%-3d: less than             <\n", lineNo);
             break;
         case Gt:
             fprintf(scannerOutputStream, "\t%-3d: greater than          >\n", lineNo);
+            break;
+        case Le:
+            fprintf(scannerOutputStream, "\t%-3d: le                   <=\n", lineNo);
+            break;
+        case Ge:
+            fprintf(scannerOutputStream, "\t%-3d: ge                   >=\n", lineNo);
+            break;
+        case Shl:
+            fprintf(scannerOutputStream, "\t%-3d: shl                  <<\n", lineNo);
+            break;
+        case Shr:
+            fprintf(scannerOutputStream, "\t%-3d: shr                  >>\n", lineNo);
             break;
         case Add:
             fprintf(scannerOutputStream, "\t%-3d: add                   +\n", lineNo);
@@ -184,48 +218,14 @@ void printToken(int lineNo) {
         case Mod:
             fprintf(scannerOutputStream, "\t%-3d: mod                   %%\n", lineNo);
             break;
-        case Bracket:
-            fprintf(scannerOutputStream, "\t%-3d:                      [\n", lineNo);
-            break;
-        case '!':
-        case ']':
-        case '(':
-        case ')':
-        case '{':
-        case '}':
-        case ',':
-        case ';':
-            fprintf(scannerOutputStream, "\t%-3d:                      %c\n", lineNo, (char)token);
-            break;
-        case Lor:
-            fprintf(scannerOutputStream, "\t%-3d: lor                  ||\n", lineNo);
-            break;
-        case Land:
-            fprintf(scannerOutputStream, "\t%-3d: land                 &&\n", lineNo);
-            break;
-        case Eq:
-            fprintf(scannerOutputStream, "\t%-3d: eq                   ==\n", lineNo);
-            break;
-        case Ne:
-            fprintf(scannerOutputStream, "\t%-3d: ne                   !=\n", lineNo);
-            break;
-        case Le:
-            fprintf(scannerOutputStream, "\t%-3d: le                   <=\n", lineNo);
-            break;
-        case Ge:
-            fprintf(scannerOutputStream, "\t%-3d: ge                   >=\n", lineNo);
-            break;
-        case Shl:
-            fprintf(scannerOutputStream, "\t%-3d: shl                  <<\n", lineNo);
-            break;
-        case Shr:
-            fprintf(scannerOutputStream, "\t%-3d: shr                  >>\n", lineNo);
-            break;
         case Inc:
             fprintf(scannerOutputStream, "\t%-3d: inc                  ++\n", lineNo);
             break;
         case Dec:
             fprintf(scannerOutputStream, "\t%-3d: dec                  --\n", lineNo);
+            break;
+        case Bracket:
+            fprintf(scannerOutputStream, "\t%-3d:                      [\n", lineNo);
             break;
         default:
             handleErrorInformation(0, FUNCTION_ERROR, "utility.c/printToken()",

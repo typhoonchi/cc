@@ -756,23 +756,27 @@ sTreeNode *parseIfStatement(){
     if (ELSE == token) {
         // 存在 Else 语句.
         match(ELSE);
-        match('{');
-        // 持续解析失败分支语句.
-        while (token != '}') {
-            // 将节点加入 If 语句根节点上.
-            if (node->children[2] != NULL) {
-                // If 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
-                while (lastSibling->sibling != NULL) {
-                    lastSibling= lastSibling->sibling;
+        if (token == IF) {
+            node->children[2] = parseIfStatement();
+        } else {
+            match('{');
+            // 持续解析失败分支语句.
+            while (token != '}') {
+                // 将节点加入 If 语句根节点上.
+                if (node->children[2] != NULL) {
+                    // If 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
+                    while (lastSibling->sibling != NULL) {
+                        lastSibling= lastSibling->sibling;
+                    }
+                    lastSibling->sibling = parseStatement();
+                } else {
+                    // If 语句根节点为空, 当前节点作为 If 语句根节点.
+                    node->children[2] = parseStatement();
+                    lastSibling = node->children[2];
                 }
-                lastSibling->sibling = parseStatement();
-            } else {
-                // If 语句根节点为空, 当前节点作为 If 语句根节点.
-                node->children[2] = parseStatement();
-                lastSibling = node->children[2];
             }
+            match('}');
         }
-        match('}');
     }
     // 返回 If 语句根节点.
     return node;
@@ -967,14 +971,14 @@ sTreeNode *parseExpressionStatement(int operator){
         node = createNode(ExpressStatement, Char, NULL, Constant,
                           0, 0, tokenValue);
         push(node);
-        match(Char);
+        match(Character);
     } else if (String == token) {
         // 处理字符串常量.
         // 为字符串常量创建节点.
         node = createNode(ExpressStatement,Char + Ptr, NULL, Constant,
                           0, 0, tokenValue);
         push(node);
-        match(Char + Ptr);
+        match(String);
     } else if (Id == token) {
         // 处理标识符.
         // 检查标识符是否已声明.
