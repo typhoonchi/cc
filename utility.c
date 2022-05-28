@@ -297,7 +297,8 @@ void handleErrorInformation(int lineNo, eErrorCode errorCode , const char *locat
     if (NULL == message) {
         fprintf(errorOutputStream,"line %d: Get an Error in Function %s\n\tError Message: %s !\n",lineNo, location, error);
     } else {
-        fprintf(errorOutputStream,"line %d: Get an Error in Function %s\n\tError Message: %s\n\tMore Information: %s !\n",lineNo, location, error, message);
+        fprintf(errorOutputStream,"line %d: Get an Error in Function %s\n\tError Message: %s\n\tMore Information: %s !\n",lineNo,
+                    location, error, message);
     }
     exit(errorCode);
 }

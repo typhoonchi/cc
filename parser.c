@@ -380,8 +380,13 @@ sTreeNode *parseFunction(int type, char *name){
     offsetAddress = 0;
     match('(');
     // 解析参数列表.
-    if (')' == token) {
+    if ((')' == token) || (VOID == token)) {
         // 空参列表 void.
+        // 判断参数列表中是否有 void.
+        if (VOID == token) {
+            // 匹配 void.
+            match(VOID);
+        }
         node->children[0] = createNode(ParameterStatement, 0, NULL, 0,
                                        0, 0, 0);
         node->children[0]->identifierType = Void;
@@ -756,9 +761,12 @@ sTreeNode *parseIfStatement(){
     if (ELSE == token) {
         // 存在 Else 语句.
         match(ELSE);
+        // 判断是否是并列 If Else 语句.
         if (token == IF) {
+            // 处理并列 If Else 语句.
             node->children[2] = parseIfStatement();
         } else {
+            // 处理正常 Else 语句.
             match('{');
             // 持续解析失败分支语句.
             while (token != '}') {
@@ -837,26 +845,35 @@ static sTreeNode *parseForStatement() {
     match(FOR);
     match('(');
     // 解析初始化语句.
-    node->children[0] = parseExpressionStatement(Assign);
-    lastSibling = node->children[0];
-    // 继续解析 ',' 后的初始化语句.
-    while (token == ',') {
-        match(',');
-        lastSibling->sibling = parseExpressionStatement(Assign);
-        lastSibling = lastSibling->sibling;
+    if (';' != token) {
+        // 非空初始化语句
+        node->children[0] = parseExpressionStatement(Assign);
+        lastSibling = node->children[0];
+        // 继续解析 ',' 后的初始化语句.
+        while (token == ',') {
+            match(',');
+            lastSibling->sibling = parseExpressionStatement(Assign);
+            lastSibling = lastSibling->sibling;
+        }
     }
     match(';');
     // 解析条件语句.
-    node->children[1] = parseExpressionStatement(Assign);
+    if (';' != token) {
+        // 非空条件语句
+        node->children[1] = parseExpressionStatement(Assign);
+    }
     match(';');
     // 解析条件更新语句.
-    node->children[2] = parseExpressionStatement(Assign);
-    lastSibling = node->children[2];
-    // 继续解析 ',' 后的条件更新语句.
-    while (',' == token) {
-        match(',');
-        lastSibling->sibling = parseExpressionStatement(Assign);
-        lastSibling = lastSibling->sibling;
+    if (')' != token) {
+        // 非空条件更新语句
+        node->children[2] = parseExpressionStatement(Assign);
+        lastSibling = node->children[2];
+        // 继续解析 ',' 后的条件更新语句.
+        while (',' == token) {
+            match(',');
+            lastSibling->sibling = parseExpressionStatement(Assign);
+            lastSibling = lastSibling->sibling;
+        }
     }
     match(')');
     match('{');
@@ -1016,13 +1033,6 @@ sTreeNode *parseExpressionStatement(int operator){
                               symbolPtr->class, 0, symbolPtr->address);
             match(Id);
         }
-        // 判断是否出现非法情况.
-        if (Id == token){
-            // 标识符后跟标识符, 非法情况, 打印错误信息.
-            handleErrorInformation(line, PARSE_ERROR, "parser.c/parseExpressionStatement",
-                                   "Get Two Identifiers Together", NULL);
-            exit(1);
-        }
         push(node);
     } else if ('(' == token) {
         // 处理表达式中括号内的子表达式.
@@ -1052,7 +1062,15 @@ sTreeNode *parseExpressionStatement(int operator){
     } else {
         // 处理错误信息, 打印错误信息.
         handleErrorInformation(line, PARSE_ERROR, "parser.c/parseExpressionStatement()",
-                               "Get an Invalid Expression", NULL);
+                                   "Get an Invalid Expression", NULL);
+    }
+    // 判断是否存在两个表达式直接连接在一起.
+    if ((Num == token) || (Character == token) || (String == token) ||
+            (Id == token) || ('(' == token) || ('!' == token)) {
+        // 标识符后跟标识符, 非法情况, 打印错误信息.
+        handleErrorInformation(line, PARSE_ERROR, "parser.c/parseExpressionStatement()",
+                                   "Get Two Identifiers Together", NULL);
+        exit(1);
     }
     // 优先级爬山处理表达式运算.
     while (token >= operator) {

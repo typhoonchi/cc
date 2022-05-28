@@ -167,7 +167,8 @@ static void scan() {
                 if (('x' == *sourcePtr) || ('X' == *sourcePtr)) {
                     // 处理十六进制数字.
                     sourcePtr++;
-                    while (isnumber(*sourcePtr) || (*sourcePtr >= 'a' && *sourcePtr <= 'f') || (*sourcePtr >= 'A' && *sourcePtr <= 'F')) {
+                    while (isnumber(*sourcePtr) || (*sourcePtr >= 'a' && *sourcePtr <= 'f') ||
+                            (*sourcePtr >= 'A' && *sourcePtr <= 'F')) {
                         token = (unsigned char)*sourcePtr;
                         sourcePtr++;
                         /*很神奇, 利用了 ASCII 码,
