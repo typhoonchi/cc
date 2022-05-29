@@ -125,7 +125,7 @@ static void scan() {
             chPtr = sourcePtr - 1;
             // 记录到 tokenString 中, 供后续使用.
             tokenString[index++] = *chPtr;
-            while (isalpha(*sourcePtr) || isnumber(*sourcePtr) || ('_' == *sourcePtr)) {
+            while (isalpha(*sourcePtr) || isdigit(*sourcePtr) || ('_' == *sourcePtr)) {
                 tokenString[index] = *sourcePtr;
                 index++;
                 // 计算 hash 值, 加速符号表查找.
@@ -153,13 +153,13 @@ static void scan() {
             token = symbolPtr->token = Id;
             tokenValue = (long long)symbolPtr->name;
             return;
-        } else if (isnumber((int)token)) {
+        } else if (isdigit((int)token)) {
             // 处理数字.
             tokenValue = token - '0';
             // 判断数字是 Dec, Oct 还是 Hex.
             if (token != '0') {
                 // 处理十进制非零整数.
-                while (isnumber(*sourcePtr)) {
+                while (isdigit(*sourcePtr)) {
                     tokenValue = tokenValue * 10 + (*sourcePtr - '0');
                     sourcePtr++;
                 }
@@ -167,7 +167,7 @@ static void scan() {
                 if (('x' == *sourcePtr) || ('X' == *sourcePtr)) {
                     // 处理十六进制数字.
                     sourcePtr++;
-                    while (isnumber(*sourcePtr) || (*sourcePtr >= 'a' && *sourcePtr <= 'f') ||
+                    while (isdigit(*sourcePtr) || (*sourcePtr >= 'a' && *sourcePtr <= 'f') ||
                             (*sourcePtr >= 'A' && *sourcePtr <= 'F')) {
                         token = (unsigned char)*sourcePtr;
                         sourcePtr++;
