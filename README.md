@@ -20,25 +20,39 @@
 ```
 
 
-#### 使用说明
+#### 使用说明 
+- 声明语句:
+1. 单条语句内声明一个或多个同类型 (int, char) 的基本变量, 一维数组变量或多维数组变量;
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+2. 支持十进制、八进制以及十六进制整数;
 
-#### 参与贡献
+3. 不允许在声明的同时进行初始化操作;
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+4. 定义返回值为 int, char, void 类型的函数; 函数参数列表可以有数组, 但是不能用指针的形式表示; 参数列表为空时可以是一对空括号, 也可以是内部有 void 的一对括号;
+
+5. 函数内局部变量声明不要求一次性在函数开始处声明, 但是不能在 If Else 语句、While 语句、For 语句以及 Do While 语句内部声明;
+
+- If Else 语句:
+1. 与 C89 中 If Else 语句用法基本一致, 允许单个 If 语句, 单个 If Else 语句, 嵌套的 If Else 语句以及并列的 If Else 语句;
+
+- While 语句:
+1. 与 C89 中 While 语句用法基本一致;
+
+- For 语句:
+1. 与 C89 中 For 语句用法基本一致, 也不允许边声明边初始化;
+
+- Do While 语句:
+1. 与 C89 中 Do While 语句用法基本一致;
+
+- 表达式语句:
+1. 支持加减乘除取模、左移右移、按位与、按位或、异或、逻辑与、逻辑或、逻辑非、等于、不等于、大于、大于等于、小于、小于等于、取下标运算;
+支持使用括号;
+
+2. 支持上述运算的复合运算;
+
+3. 不支持取地址, 解引用等运算;
+
+- Return 语句:
+1. 与 C89 中 Return 语句用法基本一致.
 
 
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
