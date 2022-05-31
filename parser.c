@@ -221,7 +221,7 @@ void checkGlobalId() {
         handleErrorInformation(line, PARSE_ERROR, "parser.c/checkGlobalId()",
                                "Get an Invalid Identifier",NULL);
     }
-    if (symbolPtr->class == Glo) {
+    if (symbolPtr->class != 0) {
         // 已声明全局标识符, 打印错误信息.
         handleErrorInformation(line, PARSE_ERROR, "parser.c/checkGlobalId()",
                                "Get Duplicate Global Declaration",(char*)tokenValue);
@@ -245,7 +245,7 @@ void checkLocalId() {
         handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()",
                                "Get an Invalid Identifier", NULL);
     }
-    if (symbolPtr->class == Loc) {
+    if (Loc == symbolPtr->class) {
         // 已声明局部变量, 打印错误信息.
         handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()",
                                "Get Duplicate Local Declaration", (char*)tokenValue);
@@ -269,7 +269,7 @@ void checkDeclaredId() {
         handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()",
                                "Get an Invalid Identifier", NULL);
     }
-    if (symbolPtr->class == 0) {
+    if (0 == symbolPtr->class) {
         // 未声明标识符, 打印错误信息.
         handleErrorInformation(line, PARSE_ERROR, "parser.c/checkLocalId()",
                                "Get an Undeclared Identifier", (char*)tokenValue);
@@ -354,7 +354,7 @@ void push(sTreeNode *node) {
  * */
 sTreeNode *pop() {
     // 检查下标是否超出表达式栈范围.
-    if (top == 0) {
+    if (0 == top) {
         // 下标越界, 打印错误信息.
         handleErrorInformation(line, PARSE_ERROR, "parser.c/pop()",
                                "Get an Expression Stack Error", NULL);
@@ -596,12 +596,12 @@ sTreeNode *parseParameters(){
     match(Id);
     // 处理数组参数.
     while ((token != ',') && (token!= ')')) {
-        if (token == Bracket) {
+        if (Bracket == token) {
             // 匹配数组参数.
             match(Bracket);
             node->identifierType += Ptr;
             // 过滤数组参数中的常量.
-            if (token == Num) {
+            if (Num == token) {
                 match(Num);
             }
             match(']');
@@ -784,7 +784,7 @@ sTreeNode *parseIfStatement(){
         // 存在 Else 语句.
         match(ELSE);
         // 判断是否是并列 If Else 语句.
-        if (token == IF) {
+        if (IF == token) {
             // 处理并列 If Else 语句.
             node->children[2] = parseIfStatement();
         } else {
@@ -886,7 +886,7 @@ static sTreeNode *parseForStatement() {
         node->children[0] = parseExpressionStatement(Assign);
         lastSibling = node->children[0];
         // 继续解析 ',' 后的初始化语句.
-        while (token == ',') {
+        while (',' == token) {
             match(',');
             lastSibling->sibling = parseExpressionStatement(Assign);
             lastSibling = lastSibling->sibling;
@@ -899,7 +899,7 @@ static sTreeNode *parseForStatement() {
         node->children[1] = parseExpressionStatement(Assign);
         lastSibling = node->children[1];
         // 继续解析 ',' 后的条件语句.
-        while (token == ',') {
+        while (',' == token) {
             match(',');
             lastSibling->sibling = parseExpressionStatement(Assign);
             lastSibling = lastSibling->sibling;

@@ -4,12 +4,8 @@
 #include <stdio.h>
 
 int main() {
-    int i, j, k;
-    int arr[10];
-    for (i = 0, j = 1, k = 2; j < 5, i < 10; j = j +1, k = k + 1, i = i + 1) {
-        arr[i] = i;
-        printf("%d ", arr[i]);
-    }
-    printf("\n%d %d %d\n", i, j, k);
+    int a, b, c;
+    a = 10;
+    if (10 == a {b = 15 * c;}
     return 0;
 }
