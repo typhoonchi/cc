@@ -6,7 +6,7 @@
 int main() {
     int i, j, k;
     int arr[10];
-    for (i = 0, j = 1, k = 2; i < 10; j = j +1, k = k + 1, i = i + 1) {
+    for (i = 0, j = 1, k = 2; j < 5, i < 10; j = j +1, k = k + 1, i = i + 1) {
         arr[i] = i;
         printf("%d ", arr[i]);
     }

@@ -27,6 +27,7 @@ static void recoverGlobalId();
 static int parseBaseType();
 static void push(sTreeNode *node);
 static sTreeNode *pop();
+static sTreeNode *locateLastSibling(sTreeNode *node);
 static sTreeNode *parseFunction(int type, char *name);
 static sTreeNode *parseGlobalDeclaration(int type, char *name);
 static sTreeNode *parseParameters();
@@ -100,9 +101,7 @@ void parse() {
         // 将节点加入根节点上.
         if (root != NULL) {
             // 根节点非空, 加到最后一个非空节点的兄弟节点上.
-            while (lastSibling->sibling != NULL) {
-                lastSibling = lastSibling->sibling;
-            }
+            lastSibling = locateLastSibling(lastSibling);
             lastSibling->sibling = node;
         } else {
             // 根节点为空, 当前节点作为根节点.
@@ -362,6 +361,21 @@ sTreeNode *pop() {
     }
     top--;
     return expressionStack[top];
+}
+
+/**
+ * @brief 定位到节点最后一个兄弟节点处.
+ *
+ * 遍历节点的兄弟节点, 定位到节点的最后一个兄弟节点处.
+ *
+ * @param   node    要遍历的节点.
+ * @return  node    节点的最后一个兄弟节点.
+ * */
+static sTreeNode *locateLastSibling(sTreeNode *node) {
+    while (node->sibling != NULL) {
+        node = node->sibling;
+    }
+    return node;
 }
 
 /**
@@ -641,9 +655,7 @@ sTreeNode *parseFunctionBody(){
             // 优先将声明语句节点加入函数体根节点上.
             if (node != NULL) {
                 // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上.
-                while (lastSibling->sibling != NULL) {
-                    lastSibling = lastSibling->sibling;
-                }
+                lastSibling = locateLastSibling(lastSibling);
                 lastSibling->sibling = parseLocalDeclaration(baseType);
             } else {
                 // 函数体根节点为空, 当前节点作为函数体根节点.
@@ -654,9 +666,9 @@ sTreeNode *parseFunctionBody(){
         } else {
             // 将非声明语句节点加入语句根节点上.
             if (statementNode !=  NULL) {
-                // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上.
+                // 根节点非空, 加到最后一个非空节点的兄弟节点上.
+                lastStatementNodeSibling = locateLastSibling(lastStatementNodeSibling);
                 lastStatementNodeSibling->sibling = parseStatement();
-                lastStatementNodeSibling = lastStatementNodeSibling->sibling;
             } else {
                 // 语句根节点为空, 当前节点作为语句根节点.
                 statementNode = parseStatement();
@@ -667,10 +679,7 @@ sTreeNode *parseFunctionBody(){
     // 将非声明语句根节点加入函数体根节点上.
     if (node !=  NULL) {
         // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上.
-        lastSibling = node;
-        while (lastSibling->sibling != NULL) {
-            lastSibling = lastSibling->sibling;
-        }
+        lastSibling = locateLastSibling(node);
         lastSibling->sibling = statementNode;
     } else {
         // 函数体根节点为空, 当前节点作为函数体根节点.
@@ -690,7 +699,7 @@ sTreeNode *parseFunctionBody(){
  * */
 sTreeNode *parseStatement() {
     sTreeNode *node = NULL;         // 语句根节点.
-
+    sTreeNode *lastSibling = NULL;  // 辅助节点.
     // 过滤空语句.
     while (';' == token) {
         match(';');
@@ -714,11 +723,13 @@ sTreeNode *parseStatement() {
     } else {
         // 匹配表达式语句.
         node = parseExpressionStatement(Assign);
-        if (',' == token) {
+        lastSibling = node;
+        while (',' == token) {
             match(',');
-        } else {
-            match(';');
+            lastSibling->sibling = parseExpressionStatement(Assign);
+            lastSibling = lastSibling->sibling;
         }
+        match(';');
     }
     return node;
 }
@@ -740,24 +751,34 @@ sTreeNode *parseIfStatement(){
     match('(');
     // 解析条件表达式.
     node->children[0] = parseExpressionStatement(Assign);
-    match(')');
-    match('{');
-    // 持续解析成功分支语句.
-    while (token != '}') {
-        // 将节点加入 If 语句根节点上.
-        if (node->children[1] != NULL) {
-            // If 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
-            while (lastSibling->sibling != NULL) {
-                lastSibling = lastSibling->sibling;
-            }
-            lastSibling->sibling = parseStatement();
-        } else {
-            // If 语句根节点为空, 当前节点作为 If 语句根节点.
-            node->children[1] = parseStatement();
-            lastSibling = node->children[1];
-        }
+    lastSibling = node->children[0];
+    while (',' == token) {
+        match(',');
+        lastSibling->sibling = parseExpressionStatement(Assign);
+        lastSibling = lastSibling->sibling;
     }
-    match('}');
+    match(')');
+    if (token != '{') {
+        // 处理单条语句.
+        node->children[1] = parseStatement();
+    } else {
+        // 处理语句块.
+        match('{');
+        // 持续解析成功分支语句.
+        while (token != '}') {
+            // 将节点加入 If 语句根节点上.
+            if (node->children[1] != NULL) {
+                // If 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
+                lastSibling = locateLastSibling(lastSibling);
+                lastSibling->sibling = parseStatement();
+            } else {
+                // If 语句根节点为空, 当前节点作为 If 语句根节点.
+                node->children[1] = parseStatement();
+                lastSibling = node->children[1];
+            }
+        }
+        match('}');
+    }
     // 解析可选 Else 语句.
     if (ELSE == token) {
         // 存在 Else 语句.
@@ -768,23 +789,27 @@ sTreeNode *parseIfStatement(){
             node->children[2] = parseIfStatement();
         } else {
             // 处理正常 Else 语句.
-            match('{');
-            // 持续解析失败分支语句.
-            while (token != '}') {
-                // 将节点加入 If 语句根节点上.
-                if (node->children[2] != NULL) {
-                    // If 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
-                    while (lastSibling->sibling != NULL) {
-                        lastSibling= lastSibling->sibling;
+            if (token != '{') {
+                // 处理单条语句.
+                node->children[2] = parseStatement();
+            } else {
+                // 处理语句块.
+                match('{');
+                // 持续解析失败分支语句.
+                while (token != '}') {
+                    // 将节点加入 If 语句根节点上.
+                    if (node->children[2] != NULL) {
+                        // If 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
+                        lastSibling = locateLastSibling(lastSibling);
+                        lastSibling->sibling = parseStatement();
+                    } else {
+                        // If 语句根节点为空, 当前节点作为 If 语句根节点.
+                        node->children[2] = parseStatement();
+                        lastSibling = node->children[2];
                     }
-                    lastSibling->sibling = parseStatement();
-                } else {
-                    // If 语句根节点为空, 当前节点作为 If 语句根节点.
-                    node->children[2] = parseStatement();
-                    lastSibling = node->children[2];
                 }
+                match('}');
             }
-            match('}');
         }
     }
     // 返回 If 语句根节点.
@@ -815,23 +840,27 @@ sTreeNode *parseWhileStatement(){
         lastSibling = lastSibling->sibling;
     }
     match(')');
-    match('{');
-    // 持续解析循环体语句.
-    while (token != '}') {
-        // 将节点加入 While 语句根节点上.
-        if (node->children[1] != NULL) {
-            // While 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
-            while (lastSibling->sibling != NULL) {
-                lastSibling = lastSibling->sibling;
+    if (token != '{') {
+        // 处理单条语句.
+        node->children[1] = parseStatement();
+    } else {
+        // 处理语句块.
+        match('{');
+        // 持续解析循环体语句.
+        while (token != '}') {
+            // 将节点加入 While 语句根节点上.
+            if (node->children[1] != NULL) {
+                // While 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
+                lastSibling = locateLastSibling(lastSibling);
+                lastSibling->sibling = parseStatement();
+            } else {
+                // While 语句根节点为空, 当前节点作为 While 语句根节点.
+                node->children[1] = parseStatement();
+                lastSibling = node->children[1];
             }
-            lastSibling->sibling = parseStatement();
-        } else {
-            // While 语句根节点为空, 当前节点作为 While 语句根节点.
-            node->children[1] = parseStatement();
-            lastSibling = node->children[1];
         }
+        match('}');
     }
-    match('}');
     // 返回 While 语句根节点.
     return node;
 }
@@ -868,6 +897,13 @@ static sTreeNode *parseForStatement() {
     if (';' != token) {
         // 非空条件语句
         node->children[1] = parseExpressionStatement(Assign);
+        lastSibling = node->children[1];
+        // 继续解析 ',' 后的条件语句.
+        while (token == ',') {
+            match(',');
+            lastSibling->sibling = parseExpressionStatement(Assign);
+            lastSibling = lastSibling->sibling;
+        }
     }
     match(';');
     // 解析条件更新语句.
@@ -883,23 +919,27 @@ static sTreeNode *parseForStatement() {
         }
     }
     match(')');
-    match('{');
-    // 持续解析循环体语句.
-    while (token != '}') {
-        // 将节点加入 For 语句根节点上.
-        if (node->children[3] != NULL) {
-            // For 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
-            while (lastSibling->sibling != NULL) {
-                lastSibling = lastSibling->sibling;
+    if (token != '{') {
+        // 处理单条语句.
+        node->children[3] = parseStatement();
+    } else {
+        // 处理语句块.
+        match('{');
+        // 持续解析循环体语句.
+        while (token != '}') {
+            // 将节点加入 For 语句根节点上.
+            if (node->children[3] != NULL) {
+                // For 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
+                lastSibling = locateLastSibling(lastSibling);
+                lastSibling->sibling = parseStatement();
+            } else {
+                // For 语句根节点为空, 当前节点作为 While 语句根节点.
+                node->children[3] = parseStatement();
+                lastSibling = node->children[3];
             }
-            lastSibling->sibling = parseStatement();
-        } else {
-            // For 语句根节点为空, 当前节点作为 While 语句根节点.
-            node->children[3] = parseStatement();
-            lastSibling = node->children[3];
         }
+        match('}');
     }
-    match('}');
     // 返回 For 语句根节点.
     return node;
 }
@@ -918,23 +958,27 @@ static sTreeNode *parseDoWhileStatement() {
     sTreeNode *lastSibling = NULL;     // 临时节点.
 
     match(DO);
-    match('{');
-    // 持续解析循环体语句.
-    while (token != '}') {
-        // 将节点加入 Do While 语句根节点上.
-        if (node->children[0] != NULL) {
-            // Do While 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
-            while (lastSibling->sibling != NULL) {
-                lastSibling = lastSibling->sibling;
+    if (token != '{') {
+        // 处理单条语句.
+        node->children[0] = parseStatement();
+    } else {
+        // 处理语句块.
+        match('{');
+        // 持续解析循环体语句.
+        while (token != '}') {
+            // 将节点加入 Do While 语句根节点上.
+            if (node->children[0] != NULL) {
+                // Do While 语句根节点非空, 加到最后一个非空节点的兄弟节点上.
+                lastSibling = locateLastSibling(lastSibling);
+                lastSibling->sibling = parseStatement();
+            } else {
+                // Do While 语句根节点为空, 当前节点作为 While 语句根节点.
+                node->children[0] = parseStatement();
+                lastSibling = node->children[0];
             }
-            lastSibling->sibling = parseStatement();
-        } else {
-            // Do While 语句根节点为空, 当前节点作为 While 语句根节点.
-            node->children[0] = parseStatement();
-            lastSibling = node->children[0];
         }
+        match('}');
     }
-    match('}');
     match(WHILE);
     match('(');
     // 解析条件语句.
