@@ -328,6 +328,7 @@ int parseBaseType(){
         handleErrorInformation(line, PARSE_ERROR, "parser.c/parseBaseType()",
                                "Get an Unknown Base Type",NULL);
     }
+    return 0;
 }
 
 /**
@@ -807,6 +808,12 @@ sTreeNode *parseWhileStatement(){
     match('(');
     // 解析条件语句.
     node->children[0] = parseExpressionStatement(Assign);
+    lastSibling = node->children[0];
+    while (',' == token) {
+        match(',');
+        lastSibling->sibling = parseExpressionStatement(Assign);
+        lastSibling = lastSibling->sibling;
+    }
     match(')');
     match('{');
     // 持续解析循环体语句.
@@ -932,6 +939,12 @@ static sTreeNode *parseDoWhileStatement() {
     match('(');
     // 解析条件语句.
     node->children[1] = parseExpressionStatement(Assign);
+    lastSibling = node->children[1];
+    while (',' == token) {
+        match(',');
+        lastSibling->sibling = parseExpressionStatement(Assign);
+        lastSibling = lastSibling->sibling;
+    }
     match(')');
     match(';');
     // 返回 Do While 语句根节点.

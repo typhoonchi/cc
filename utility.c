@@ -70,6 +70,7 @@ void init(const char *fileName) {
  * @return  void
  * */
 void destroy() {
+    // 关闭输出流.
     if (scannerOutputStream != stdout) {
         fclose(scannerOutputStream);
     }
@@ -82,22 +83,14 @@ void destroy() {
     if (codeRunnerOutputStream != stdout) {
         fclose(codeRunnerOutputStream);
     }
-    // 释放源代码空间.
-    free(source);
-    source = sourcePtr = NULL;
-    // 释放代码段空间.
-    free(code);
-    code = codePtr = NULL;
-    // 释放数据段空间.
-    free(data);
-    data = NULL;
-    // 释放堆栈段空间.
-    free(stack);
-    stack = NULL;
-    // 释放 AST 空间.
-    destroyNode(root);
+    // 判断源代码空间是否为空.
+    if (source != NULL) {
+        // 释放源代码空间.
+        free(source);
+        source = sourcePtr = NULL;
+    }
     // 判断符号表是否为空.
-    if (NULL != symbolTable) {
+    if (symbolTable != NULL) {
         // 释放非空符号表标识符指向空间.
         symbolPtr = symbolTable;
         // 遍历非空符号表, 释放标识符空间.
@@ -109,10 +102,36 @@ void destroy() {
             }
             symbolPtr++;
         }
+        // 释放符号表空间.
+        free(symbolTable);
+        symbolTable = symbolPtr = NULL;
     }
-    // 释放符号表空间.
-    free(symbolTable);
-    symbolTable = symbolPtr = NULL;
+    // 判断数据段空间是否为空.
+    if (data != NULL) {
+        // 释放数据段空间.
+        free(data);
+        data = dataPtr = NULL;
+    }
+    // 清空 token 值.
+    token = tokenValue = 0;
+    // 清空行号.
+    line = 0;
+    // 释放 AST 空间.
+    destroyNode(root);
+    // 重置 main 函数指针.
+    mainPtr = NULL;
+    // 判断代码段空间是否为空.
+    if (code != NULL) {
+        // 释放代码段空间.
+        free(code);
+        code = codePtr = NULL;
+    }
+    // 判断堆栈段空间是否为空.
+    if (stack != NULL) {
+        // 释放堆栈段空间.
+        free(stack);
+        stack = NULL;
+    }
 }
 
 /**
@@ -350,17 +369,22 @@ static void loadSrc(const char *fileName){
  * @return  baseLen  不带扩展名的文件路径长度.
  * */
 static int getBaseFileNameLen(const char *fileName) {
+    int len = (int)strlen(fileName);           // 文件名总长度长度.
     int baseLen = 0;                             // 消除扩展名后的文件名长度.
-    char *chPtr = strchr(fileName, '.');    // 定位扩展名前的 '.' 的位置.
 
+    // 倒序遍历文件名, 定位文件扩展名
+    for (baseLen = len - 1; baseLen > -1; baseLen--) {
+        // 找到文件扩展名的 '.', 返回其长度.
+        if ('.' == *(fileName + baseLen)) {
+            break;
+        }
+    }
     // 判断文件是否有扩展名.
-    if (NULL == chPtr) {
+    if (0 == baseLen) {
         // 不带扩展名, 打印错误信息.
         handleErrorInformation(0, INIT_ERROR, "utility.c/getBaseFileNameLen()",
                                "Get an Invalid File Name", NULL);
     }
-    // 带扩展名, 复制扩展名前的文件路径.
-    baseLen = (int)(chPtr - fileName);
     // 返回不带扩展名的文件长度.
     return baseLen;
 }
@@ -492,6 +516,9 @@ static void initParser(const char *fileName, int baseLen) {
         // 不重定向到文件, 输出到标准输出.
         parserOutputStream = stdout;
     }
+    // 重置根节点与 main 函数节点
+    root = NULL;
+    mainPtr = NULL;
 }
 
 /**

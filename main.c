@@ -14,9 +14,18 @@ FILE *codeRunnerOutputStream;       // 代码运行输出流.
 FILE *errorOutputStream;            // 错误输出流.
 char *source;                       // 源代码缓冲区.
 char*sourcePtr;                     // 源代码指针.
+sSymbol *symbolTable;               // 符号表.
+sSymbol *symbolPtr;                 // 符号表指针.
+long long *data;                    // 数据段.
+long long *dataPtr;                 // 数据段指针.
 long long token;                    // token类型
 long long tokenValue;               // 常量值, 字符值, 字符串地址或变量名地址.
 int line;                           // 行号.
+sTreeNode *root;                    // AST 根节点.
+long long *mainPtr;                 // main函数指针.
+long long *code;                    // 代码段.
+long long *codePtr;                 // 代码段指针.
+long long *stack;                   // 堆栈段.
 int phaseFlag;                      /*阶段标志位:
  * [0x0, 0x8) 不进行任何分析;
  * [0x8, 0xC) 进行到词法分析;
@@ -27,15 +36,6 @@ int phaseFlag;                      /*阶段标志位:
 int scanTrace;                      // 打印标志位: 是否打印词法分析结果.
 int parseTrace;                     // 打印标志位: 是否打印语法分析结果.
 int generateTrace;                  // 打印标志位: 是否打印代码生成结果.
-sTreeNode *root;                    // AST 根节点.
-sSymbol *symbolTable;               // 符号表.
-sSymbol *symbolPtr;                 // 符号表指针.
-long long *code;                    // 代码段.
-long long *codePtr;                 // 代码段指针.
-long long *mainPtr;                 // main函数指针.
-long long *stack;                   // 堆栈段.
-long long *data;                    // 数据段.
-long long *dataPtr;                 // 数据段指针.
 
 int main(int argc, char** argv) {
     // 初始化标志位.

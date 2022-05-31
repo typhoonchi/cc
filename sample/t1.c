@@ -1,16 +1,14 @@
 #include <stdio.h>
-enum e{
-    DAY = 1, MON = 2, DSY
-};
 
-int main(){
-    enum e x;
-    int xx, y;
-    xx = 3;
-    y = -1;
-    xx = xx - -y;
-    printf("%d\n",xx);
-    x = 3;
-    printf("%d\n",x);
+
+int main() {
+    int i, j, k;
+    int arr[10];
+    i = 0, j = 1, k = 2;
+    do {
+        arr[i] = i;
+        printf("%d ", arr[i]);
+    } while (j = j + 1, k = k + 1, (i = i + 1) < 10);
+    printf("\n%d %d %d\n", i, j, k);
     return 0;
 }

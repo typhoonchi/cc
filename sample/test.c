@@ -4,15 +4,12 @@
 #include <stdio.h>
 
 int main() {
-    int a,b;
-    b = 0;
-    if (0 == b) {
-        a = 0;
-    } else if (b == 1) {
-        a = 1;
-    } else if (b == 2) {
-        a = 2;
+    int i, j, k;
+    int arr[10];
+    for (i = 0, j = 1, k = 2; i < 10; j = j +1, k = k + 1, i = i + 1) {
+        arr[i] = i;
+        printf("%d ", arr[i]);
     }
-    printf("%d\n",a);
+    printf("\n%d %d %d\n", i, j, k);
     return 0;
 }
