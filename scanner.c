@@ -115,7 +115,7 @@ static void scan() {
             while ((*sourcePtr != '\0') && (*sourcePtr != '\n')) {
                 sourcePtr++;
             }
-        } else if ((' ' == token) || ('\t' == token)) {
+        } else if ((' ' == token) || ('\t' == token || ('\r' == token))) {
             // 跳过.
         } else if (isalpha((int)token) || ('_' == token)) {
             // 处理标识符 ID.
