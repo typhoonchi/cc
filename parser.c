@@ -1107,6 +1107,8 @@ sTreeNode *parseExpressionStatement(int operator){
     } else if (Add == token) {
         // 处理单目运算符正号 +.
         match(Add);
+        node = parseExpressionStatement(Inc);
+        push(node);
     } else if (Sub == token) {
         // 处理单目运算符负号 -.
         node = createNode(ExpressStatement, 0, NULL, Operator,

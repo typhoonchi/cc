@@ -39,7 +39,7 @@ int generateTrace;                  // 打印标志位: 是否打印代码生成
 
 int main(int argc, char** argv) {
     // 初始化标志位.
-    phaseFlag = 0xC;
+    phaseFlag = 0xF;
     scanTrace = 1;
     parseTrace = 1;
     generateTrace = 1;
