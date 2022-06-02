@@ -6,6 +6,12 @@
 int main() {
     int a, b, c;
     a = 10;
-    if (10 == a {b = 15 * c;}
+    if (a == 10) {
+        int d,e,f;
+        e = 15;
+        printf("%d\n",e);
+    }
+    int ff;
+    printf("%d\n",a);
     return 0;
 }

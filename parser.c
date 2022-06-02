@@ -501,6 +501,81 @@ static sTreeNode *parseGlobalDeclaration(int type, char *name) {
 }
 
 /**
+ * @brief 解析参数列表.
+ *
+ * 解析参数列表中参数信息.
+ *
+ * @param   void
+ * @return  node    抽象语法树节点指针, 指向参数列表子树.
+ * */
+sTreeNode *parseParameters(){
+    sTreeNode *node = createNode(ParameterStatement,parseBaseType(), (char*)tokenValue, 0,
+                                 0, 0, 0);                 // 参数列表根节点.
+
+    // 形参作为局部变量使用.
+    checkLocalId();
+    hideGlobalId();
+    match(Id);
+    // 处理数组参数.
+    while ((token != ',') && (token!= ')')) {
+        if (Bracket == token) {
+            // 匹配数组参数.
+            match(Bracket);
+            node->identifierType += Ptr;
+            // 过滤数组参数中的常量.
+            if (Num == token) {
+                match(Num);
+            }
+            match(']');
+        } else {
+            exit(1);
+        }
+    }
+    // 更新符号表中局部变量信息.
+    symbolPtr->class = Loc;
+    symbolPtr->type = node->identifierType;
+    symbolPtr->address = offsetAddress;
+    // 更新偏移地址.
+    offsetAddress++;
+    if (',' == token) {
+        // 匹配后续参数.
+        match(',');
+        // 后续参数作为兄弟节点, 依次加入到参数列表根节点中.
+        node->sibling = parseParameters();
+    }
+    // 返回参数列表根节点.
+    return node;
+}
+
+/**
+ * @brief 解析函数体.
+ *
+ * 解析函数体中语句.
+ *
+ * @param   void
+ * @return  node    抽象语法树节点指针, 指向函数体子树.
+ * */
+sTreeNode *parseFunctionBody(){
+    sTreeNode *node = NULL;                     // 函数体根节点.
+    sTreeNode *lastSibling = NULL;              // 最后一个兄弟节点.
+
+    // 持续解析非声明语句.
+    while (token != '}') {
+        if (node !=  NULL) {
+            // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上.
+            lastSibling = locateLastSibling(lastSibling);
+            lastSibling->sibling = parseStatement();
+        } else {
+            // 函数体根节点为空, 当前节点作为函数体根节点.
+            node = parseStatement();
+            lastSibling = node;
+        }
+    }
+    // 返回函数体根节点.
+    return node;
+}
+
+/**
  * @brief 解析局部变量声明语句.
  *
  * 解析局部变量声明语句.
@@ -579,117 +654,6 @@ static sTreeNode *parseLocalDeclaration(int type) {
 }
 
 /**
- * @brief 解析参数列表.
- *
- * 解析参数列表中参数信息.
- *
- * @param   void
- * @return  node    抽象语法树节点指针, 指向参数列表子树.
- * */
-sTreeNode *parseParameters(){
-    sTreeNode *node = createNode(ParameterStatement,parseBaseType(), (char*)tokenValue, 0,
-                                 0, 0, 0);                 // 参数列表根节点.
-
-    // 形参作为局部变量使用.
-    checkLocalId();
-    hideGlobalId();
-    match(Id);
-    // 处理数组参数.
-    while ((token != ',') && (token!= ')')) {
-        if (Bracket == token) {
-            // 匹配数组参数.
-            match(Bracket);
-            node->identifierType += Ptr;
-            // 过滤数组参数中的常量.
-            if (Num == token) {
-                match(Num);
-            }
-            match(']');
-        } else {
-            exit(1);
-        }
-    }
-    // 更新符号表中局部变量信息.
-    symbolPtr->class = Loc;
-    symbolPtr->type = node->identifierType;
-    symbolPtr->address = offsetAddress;
-    // 更新偏移地址.
-    offsetAddress++;
-    if (',' == token) {
-        // 匹配后续参数.
-        match(',');
-        // 后续参数作为兄弟节点, 依次加入到参数列表根节点中.
-        node->sibling = parseParameters();
-    }
-    // 返回参数列表根节点.
-    return node;
-}
-
-/**
- * @brief 解析函数体.
- *
- * 解析函数体中语句.
- *
- * @param   void
- * @return  node    抽象语法树节点指针, 指向函数体子树.
- * */
-sTreeNode *parseFunctionBody(){
-    sTreeNode *node = NULL;                     // 函数体根节点.
-    sTreeNode *statementNode = NULL;            // 非声明语句根节点.
-    sTreeNode *lastSibling = NULL;              // 最后一个兄弟节点.
-    sTreeNode *lastStatementNodeSibling =NULL;  // 非证明语句最后一个兄弟节点.
-    int baseType = 0;                           // 标识符类别.
-
-    // 持续解析非声明语句.
-    while (token != '}') {
-        if ((INT == token) || (CHAR == token)) {
-            // 获取局部变量类型.
-            baseType = parseBaseType();
-            // 检查是否已声明过该局部变量.
-            checkLocalId();
-            // 隐藏全局变量.
-            hideGlobalId();
-            symbolPtr->class = Loc;
-            symbolPtr->type = baseType;
-            offsetAddress++;
-            // 优先将声明语句节点加入函数体根节点上.
-            if (node != NULL) {
-                // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上.
-                lastSibling = locateLastSibling(lastSibling);
-                lastSibling->sibling = parseLocalDeclaration(baseType);
-            } else {
-                // 函数体根节点为空, 当前节点作为函数体根节点.
-                node = parseLocalDeclaration(baseType);
-                lastSibling = node;
-            }
-            match(';');
-        } else {
-            // 将非声明语句节点加入语句根节点上.
-            if (statementNode !=  NULL) {
-                // 根节点非空, 加到最后一个非空节点的兄弟节点上.
-                lastStatementNodeSibling = locateLastSibling(lastStatementNodeSibling);
-                lastStatementNodeSibling->sibling = parseStatement();
-            } else {
-                // 语句根节点为空, 当前节点作为语句根节点.
-                statementNode = parseStatement();
-                lastStatementNodeSibling = statementNode;
-            }
-        }
-    }
-    // 将非声明语句根节点加入函数体根节点上.
-    if (node !=  NULL) {
-        // 函数体根节点非空, 加到最后一个非空节点的兄弟节点上.
-        lastSibling = locateLastSibling(node);
-        lastSibling->sibling = statementNode;
-    } else {
-        // 函数体根节点为空, 当前节点作为函数体根节点.
-        node = statementNode;
-    }
-    // 返回函数体根节点.
-    return node;
-}
-
-/**
  * @brief 解析语句.
  *
  * 解析 If 语句, While 语句, For 语句, Do While 语句, Return 语句和表达式语句.
@@ -700,12 +664,27 @@ sTreeNode *parseFunctionBody(){
 sTreeNode *parseStatement() {
     sTreeNode *node = NULL;         // 语句根节点.
     sTreeNode *lastSibling = NULL;  // 辅助节点.
+    int baseType = 0;               // 标识符类别.
+
     // 过滤空语句.
     while (';' == token) {
         match(';');
     }
     // 判断语句类型.
-    if (IF == token) {
+    if ((INT == token) || (CHAR == token)) {
+        // 匹配局部变量声明语句.
+        // 获取局部变量类型.
+        baseType = parseBaseType();
+        // 检查是否已声明过该局部变量.
+        checkLocalId();
+        // 隐藏全局变量.
+        hideGlobalId();
+        symbolPtr->class = Loc;
+        symbolPtr->type = baseType;
+        offsetAddress++;
+        node = parseLocalDeclaration(baseType);
+        match(';');
+    } else if (IF == token) {
         // 匹配 If 语句.
         node = parseIfStatement();
     } else if (WHILE == token) {

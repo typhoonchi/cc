@@ -15,6 +15,8 @@ static long long localSize;                 // 存放局部变量占用空间大
 static int type;                            // 存放表达式当前结果的类型
 
 static void generateFunctionCode(sTreeNode *node);
+static void calculateSpaceForLocalVariable(sTreeNode *node);
+static void initSpaceForLocalArray(sTreeNode *node);
 static void generateIfStatementCode(sTreeNode *node);
 static void generateWhileStatementCode(sTreeNode *node);
 static void generateForStatementCode(sTreeNode *node);
@@ -295,8 +297,8 @@ void runCode(){
  * @return  void
  * */
 void generateFunctionCode(sTreeNode *node) {
-    sTreeNode *tempNode = NULL;       // 临时节点.
-    sTreeNode *childNode = NULL;      // 临时节点.
+    sTreeNode *tempNode = NULL;             // 临时节点.
+    sTreeNode *childNode = NULL;            // 临时节点.
     long long size = 1;                     // 局部变量数组大小.
     long long scale = 1;                    // long long 与数组元素大小的比值.
     long long base = 1;                     // 要填写的栈基地址.
@@ -318,62 +320,51 @@ void generateFunctionCode(sTreeNode *node) {
         }
     }
     // 计算局部变量占用空间大小.
-    tempNode = node->children[1];
-    while (DeclareStatement == tempNode->statementType) {
-        // 局部变量空间大小增加 1.
-        localSize++;
-        // 初始化数组大小与比例值.
-        size = 1;
-        scale = 1;
-        // 保存当前变量类型.
-        currentType = tempNode->identifierType;
-        // 定位到变量的孩子节点, 解析数组.
-        childNode = tempNode->children[0];
-        // 解析数组.
-        while (childNode != NULL) {
-            // 解析一层 [], 当前类型减小一个 Ptr.
-            currentType -= Ptr;
-            // 用于最后一层空间分配.
-            if (NULL == childNode->sibling) {
-                if (Int == currentType) {
-                    scale = 2;
-                } else if (Char == currentType) {
-                    scale = 8;
-                }
-            }
-            // 更新局部变量空间大小.
-            localSize = localSize + size * ((childNode->value % scale) ? (childNode->value / scale + 1) : (childNode->value / scale));
-            // 更新数组大小.
-            size = size * childNode->value;
-            // 继续解析数组.
-            childNode = childNode->sibling;
-        }
-        tempNode = tempNode->sibling;
-    }
+    calculateSpaceForLocalVariable(node->children[1]);
     // 为局部变量分配栈空间.
     *codePtr = NVAR;
     codePtr++;
     *codePtr = localSize;
     codePtr++;
     // 初始化局部变量数组的指针关系.
-    tempNode = node->children[1];
-    while (DeclareStatement == tempNode->statementType) {
-        // 判断是否可能是数组.
-        if (tempNode->identifierType > Ptr) {
-            // 初始化数组大小与比例.
+    initSpaceForLocalArray(node->children[1]);
+    // 生成函数体代码.
+    generateCode(node->children[1]);
+    // 处理 void 类型函数定义, 补充 RET.
+    if (*(codePtr - 1) != RET) {
+        *codePtr = RET;
+        codePtr++;
+    }
+}
+
+/**
+ * @brief 计算局部变量所用空间.
+ *
+ * 计算局部变量所用空间.
+ *
+ * @param   node    AST 节点.
+ * @return  void
+ * */
+static void calculateSpaceForLocalVariable(sTreeNode *node) {
+    sTreeNode *childNode = NULL;            // 临时节点.
+    long long size = 1;                     // 局部变量数组大小.
+    long long scale = 1;                    // long long 与数组元素大小的比值.
+    int currentType = 1;                    // 解析时变量当前的类型.
+
+    while (node != NULL) {
+        if (DeclareStatement == node->statementType) {
+            // 局部变量空间大小增加 1.
+            localSize++;
+            // 初始化数组大小与比例值.
             size = 1;
             scale = 1;
-            // 记录数组类型.
-            currentType = tempNode->identifierType;
-            // 计算数组基地址指向栈偏移地址.
-            currentAddress = offsetBase - tempNode->value + size;
-            // 定位到孩子节点, 解析数组.
-            childNode = tempNode->children[0];
+            // 保存当前变量类型.
+            currentType = node->identifierType;
+            // 定位到变量的孩子节点, 解析数组.
+            childNode = node->children[0];
             // 解析数组.
             while (childNode != NULL) {
-                // 记录要填写栈基准位置.
-                base = currentAddress;
-                // 解析一层 [], 当前类型值减 Ptr.
+                // 解析一层 [], 当前类型减小一个 Ptr.
                 currentType -= Ptr;
                 // 用于最后一层空间分配.
                 if (NULL == childNode->sibling) {
@@ -383,39 +374,118 @@ void generateFunctionCode(sTreeNode *node) {
                         scale = 8;
                     }
                 }
-                // 填写指针地址.
-                for (int i = 0; i < size; i++) {
-                    *codePtr = LEA;
-                    codePtr++;
-                    *codePtr = base - size + i;
-                    codePtr++;
-                    *codePtr = PUSH;
-                    codePtr++;
-                    *codePtr = LEA;
-                    codePtr++;
-                    *codePtr = currentAddress;
-                    codePtr++;
-                    *codePtr = SA;
-                    codePtr++;
-                    // 更新偏移地址.
-                    currentAddress += ((childNode->value % scale) ? (childNode->value / scale + 1) : (childNode->value / scale));
-                }
-                // 计算数组大小.
+                // 更新局部变量空间大小.
+                localSize = localSize + size * ((childNode->value % scale) ? (childNode->value / scale + 1) : (childNode->value / scale));
+                // 更新数组大小.
                 size = size * childNode->value;
                 // 继续解析数组.
                 childNode = childNode->sibling;
             }
+        } else if (IfStatement == node->statementType) {
+            // 遍历成功分支语句, 处理分支语句中的声明语句.
+            calculateSpaceForLocalVariable(node->children[1]);
+            // 判断是否有失败分支语句.
+            if (node->children[2] != NULL) {
+                // 遍历失败分支语句, 处理分支语句中的声明语句.
+                calculateSpaceForLocalVariable(node->children[2]);
+            }
+        } else if (WhileStatement == node->statementType) {
+            // 遍历循环体语句, 处理分支语句中的声明语句.
+            calculateSpaceForLocalVariable(node->children[1]);
+        } else if (ForStatement == node->statementType) {
+            // 遍历循环体语句, 处理分支语句中的声明语句.
+            calculateSpaceForLocalVariable(node->children[3]);
+        } else if (DoWhileStatement == node->statementType) {
+            // 遍历循环体语句, 处理分支语句中的声明语句.
+            calculateSpaceForLocalVariable(node->children[0]);
         }
-        tempNode = tempNode->sibling;
-    }
-    // 生成函数体代码.
-    generateCode(tempNode);
-    // 处理 void 类型函数定义, 补充 RET.
-    if (*(codePtr - 1) != RET) {
-        *codePtr = RET;
-        codePtr++;
+        // 遍历兄弟结点.
+        node = node->sibling;
     }
 }
+
+/**
+ * @brief 为局部数组变量初始化空间.
+ *
+ * 为局部数组变量初始化空间.
+ *
+ * @param   node    AST 节点.
+ * @return  void
+ * */
+static void initSpaceForLocalArray(sTreeNode *node) {
+    sTreeNode *childNode = NULL;            // 临时节点.
+    long long size = 1;                     // 局部变量数组大小.
+    long long scale = 1;                    // long long 与数组元素大小的比值.
+    long long base = 1;                     // 要填写的栈基地址.
+    long long currentAddress = 1;           // 当前栈偏移地址.
+    int currentType = 1;                    // 解析时变量当前的类型.
+
+    while (node != NULL) {
+        if (DeclareStatement == node->statementType) {
+            // 判断是否可能是数组.
+            if (node->identifierType > Ptr) {
+                // 初始化数组大小与比例.
+                size = 1;
+                scale = 1;
+                // 记录数组类型.
+                currentType = node->identifierType;
+                // 计算数组基地址指向栈偏移地址.
+                currentAddress = offsetBase - node->value + size;
+                // 定位到孩子节点, 解析数组.
+                childNode = node->children[0];
+                // 解析数组.
+                while (childNode != NULL) {
+                    // 记录要填写栈基准位置.
+                    base = currentAddress;
+                    // 解析一层 [], 当前类型值减 Ptr.
+                    currentType -= Ptr;
+                    // 用于最后一层空间分配.
+                    if (NULL == childNode->sibling) {
+                        if (Int == currentType) {
+                            scale = 2;
+                        } else if (Char == currentType) {
+                            scale = 8;
+                        }
+                    }
+                    // 填写指针地址.
+                    for (int i = 0; i < size; i++) {
+                        *codePtr = LEA;
+                        codePtr++;
+                        *codePtr = base - size + i;
+                        codePtr++;
+                        *codePtr = PUSH;
+                        codePtr++;
+                        *codePtr = LEA;
+                        codePtr++;
+                        *codePtr = currentAddress;
+                        codePtr++;
+                        *codePtr = SA;
+                        codePtr++;
+                        // 更新偏移地址.
+                        currentAddress += ((childNode->value % scale) ? (childNode->value / scale + 1) : (childNode->value / scale));
+                    }
+                    // 计算数组大小.
+                    size = size * childNode->value;
+                    // 继续解析数组.
+                    childNode = childNode->sibling;
+                }
+            }
+        } else if (IfStatement == node->statementType) {
+            initSpaceForLocalArray(node->children[1]);
+            if (node->children[2] != NULL) {
+                initSpaceForLocalArray(node->children[2]);
+            }
+        } else if (WhileStatement == node->statementType) {
+            initSpaceForLocalArray(node->children[1]);
+        } else if (ForStatement == node->statementType) {
+            initSpaceForLocalArray(node->children[3]);
+        } else if (DoWhileStatement == node->statementType) {
+            initSpaceForLocalArray(node->children[0]);
+        }
+        node = node->sibling;
+    }
+}
+
 
 /**
  * @brief 生成 If 语句代码.
