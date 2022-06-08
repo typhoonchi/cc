@@ -399,7 +399,7 @@ static void calculateSpaceForLocalVariable(sTreeNode *node) {
             // 遍历循环体语句, 处理分支语句中的声明语句.
             calculateSpaceForLocalVariable(node->children[0]);
         }
-        // 遍历兄弟结点.
+        // 处理兄弟结点.
         node = node->sibling;
     }
 }
@@ -482,6 +482,7 @@ static void initSpaceForLocalArray(sTreeNode *node) {
         } else if (DoWhileStatement == node->statementType) {
             initSpaceForLocalArray(node->children[0]);
         }
+        // 处理兄弟节点.
         node = node->sibling;
     }
 }
@@ -724,6 +725,7 @@ void generateExpressionStatementCode(sTreeNode *node) {
         // 处理运算符.
         if ('!' == node->operatorType) {
             // 处理单目运算符 !.
+            generateExpressionStatementCode(node->children[0]);
             *codePtr = PUSH;
             codePtr++;
             *codePtr = IMM;

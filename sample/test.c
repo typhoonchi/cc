@@ -5,13 +5,18 @@
 
 int main() {
     int a, b, c;
-    a = 10;
-    if (a == 10) {
+    a = 0;
+    if (!a) {
         int d,e,f;
         e = 15;
         printf("%d\n",e);
     }
-    int ff;
-    printf("%d\n",a);
+    {
+        int ff;
+        printf("%d\n",a);
+    }
+    {
+
+    }
     return 0;
 }

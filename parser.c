@@ -656,7 +656,7 @@ static sTreeNode *parseLocalDeclaration(int type) {
 /**
  * @brief 解析语句.
  *
- * 解析 If 语句, While 语句, For 语句, Do While 语句, Return 语句和表达式语句.
+ * 解析 局部变量声明语句, If 语句, While 语句, For 语句, Do While 语句, Return 语句, 语句块和表达式语句.
  *
  * @param   void
  * @return  node    抽象语法树节点指针, 指向语句子树.
@@ -699,10 +699,26 @@ sTreeNode *parseStatement() {
     } else if (RETURN == token) {
         // 匹配 Return 语句.
         node = parseReturnStatement();
+    } else if (('{' == token)) {
+        // 匹配语句块.
+        match('{');
+        // 判断是否是空语句块.
+        if (token != '}') {
+            // 匹配语句.
+            node = parseStatement();
+            lastSibling = node;
+            while (token != '}') {
+                // 匹配语句块中语句.
+                lastSibling->sibling = parseStatement();
+                lastSibling = lastSibling->sibling;
+            }
+        }
+        match('}');
     } else {
         // 匹配表达式语句.
         node = parseExpressionStatement(Assign);
         lastSibling = node;
+        // 处理逗号运算符.
         while (',' == token) {
             match(',');
             lastSibling->sibling = parseExpressionStatement(Assign);
